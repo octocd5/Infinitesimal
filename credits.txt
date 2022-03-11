@@ -1,4 +1,4 @@
-PIU Infinitesimal is a theme created by dj505.
+Infinitesimal is a theme created by dj505.
 Special thanks to testers for feedback.
 Special thanks to Rhythm Lunatic, Tertu, Gio, JoseVarelaP, and others for advice and help with programming/optimization.
 

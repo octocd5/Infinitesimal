@@ -6,7 +6,7 @@ CustomBranch = {
 		if PROFILEMAN:GetNumLocalProfiles() > 0 then
 			return "ScreenSelectProfile"
 		else
-			return "ScreenSelectMusic"
+			return "OFSelectMusic"
 		end
 	end,
 	AfterProfileSave = function()
