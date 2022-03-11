@@ -52,10 +52,24 @@ local function MoveSelection(self, offset, Songs)
 
       if (i == IncOffset and offset == -1) or (i == DecOffset and offset == 1) then
         self:GetChild("Wheel"):GetChild("Container"..i):sleep(0):addx((offset*-240)*-13)
+        :GetChild("Banner"):queuecommand("UpdateBanner")
       end
     end
 
   end
+
+  if offset ~= 0 then
+		-- Stop all the music playing, Which is the Song Music
+		SOUND:StopMusic()
+
+		-- Check if its a song.
+		if type(Songs[CurSong]) ~= "string" then
+			-- Play Current selected Song Music.
+			if Songs[CurSong][1]:GetMusicPath() then
+				SOUND:PlayMusicPart(Songs[CurSong][1]:GetMusicPath(),Songs[CurSong][1]:GetSampleStart(),Songs[CurSong][1]:GetSampleLength(),0,0,true)
+			end
+		end
+	end
 
 end
 
@@ -90,13 +104,14 @@ return function(Style)
       end,
 
       Def.Banner {
+        Name="Banner",
 
         InitCommand=function(self)
           self:queuecommand("UpdateBanner")
         end,
 
     		UpdateBannerCommand=function(self)
-          Song = Songs[i][1]
+          Song = Songs[pos][1]
   				local Path = Song:GetBannerPath()
   				if not Path then
   					Path = Song:GetBackgroundPath()
@@ -121,7 +136,7 @@ return function(Style)
     			self:addy(-50):zoom(0.25)
     		end,
     		OnCommand=function(self, params)
-    				self:settext(i)
+    				self:settext(pos)
     		end
     	}
     }
