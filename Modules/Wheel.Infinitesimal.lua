@@ -7,6 +7,18 @@ local FirstOffset = 1 -- The leftmost item in the wheel
 local LastOffset = 13 -- The rightmost item in the wheel
 local Spacing = math.abs(math.sin(XOffset / math.pi))
 
+local function UpdateBanner(self, CurSong, Songs)
+  Song = Songs[CurSong][1]
+  local Path = Song:GetBannerPath()
+  if not Path then
+    Path = Song:GetBackgroundPath()
+    if not Path then
+      Path = THEME:GetPathG("Common fallback", "banner")
+    end
+  end
+  return Path
+end
+
 local function MoveSelection(self, offset, Songs)
 
   -- "offset" should always be either -1 or 1, not to be confused with XOffset
@@ -37,10 +49,10 @@ local function MoveSelection(self, offset, Songs)
   if offset ~= 0 then
 
     for i = 1,13 do
-      local pos = CurSong + (6 * offset)
+      local pos = CurSong + (5 * offset)
 
       if offset == 1 then
-        pos = CurSong + (7 * offset)
+        pos = CurSong + (6 * offset)
       end
 
       while pos > #Songs do pos = pos-#Songs end
@@ -57,6 +69,7 @@ local function MoveSelection(self, offset, Songs)
       if (i == FirstOffset and offset == -1) or (i == LastOffset and offset == 1) then
         self:GetChild("Wheel"):GetChild("Container"..i):sleep(0)
         :addx((-offset * (250 - Spacing * 100))*-13)
+        :GetChild("Banner"):LoadFromCachedBanner(UpdateBanner(self, pos, Songs)):scaletoclipped(212, 120)
       end
 
     end
@@ -118,18 +131,11 @@ return function(Style)
         end,
 
     		UpdateBannerCommand=function(self)
-          Song = Songs[pos][1]
-  				local Path = Song:GetBannerPath()
-  				if not Path then
-  					Path = Song:GetBackgroundPath()
-  					if not Path then
-  						Path = THEME:GetPathG("Common fallback", "banner")
-  					end
-          else
-            -- Make the banner slightly larger than 210x118 to avoid garbled edges
-            -- (if only AFTs could be done here)
-  				  self:LoadFromCachedBanner(Path):scaletoclipped(212, 120)
-          end
+          Path = UpdateBanner(self, pos, Songs)
+          -- Make the banner slightly larger than 210x118 to avoid garbled edges
+          -- (if only AFTs could be done here)
+          SCREENMAN:SystemMessage("Updating banner to "..Path)
+				  self:LoadFromCachedBanner(Path):scaletoclipped(212, 120)
     		end
     	},
 
