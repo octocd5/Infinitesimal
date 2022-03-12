@@ -130,7 +130,6 @@ return function(Style)
           Path = UpdateBanner(self, pos, Songs)
           -- Make the banner slightly larger than 210x118 to avoid garbled edges
           -- (if only AFTs could be done here)
-          SCREENMAN:SystemMessage("Updating banner to "..Path)
 				  self:LoadFromCachedBanner(Path):scaletoclipped(212, 120)
     		end
     	},
@@ -157,7 +156,14 @@ return function(Style)
       self:Center():zoom(SCREEN_HEIGHT/720)
 
       SCREENMAN:GetTopScreen():AddInputCallback(TF_WHEEL.Input(self))
+      self:sleep(0.2):queuecommand("PlayCurrentSong")
       MoveSelection(self,0,Songs)
+    end,
+
+    PlayCurrentSongCommand=function(self)
+			if type(Songs[CurSong]) ~= "string" and Songs[CurSong][1]:GetMusicPath() then
+				SOUND:PlayMusicPart(Songs[CurSong][1]:GetMusicPath(),Songs[CurSong][1]:GetSampleStart(),Songs[CurSong][1]:GetSampleLength(),0,0,true)
+			end
     end,
 
     MenuLeftCommand=function(self)
