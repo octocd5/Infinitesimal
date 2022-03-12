@@ -59,7 +59,7 @@ local function MoveSelection(self, offset, Songs)
 			while pos < 1 do pos = #Songs+pos end
 
       -- Make the thing move
-      self:GetChild("Wheel"):GetChild("Container"..i)
+      self:GetChild("Wheel"):GetChild("Container"..i):finishtweening()
       :decelerate(.1)
       :addx(-offset * (250 - Spacing * 100))
       :rotationy(clamp((i - XOffset) * 36, -85, 85))
@@ -121,6 +121,7 @@ return function(Style)
         :rotationy(clamp(Offset * 36, -85, 85))
         :z(-math.abs(Offset))
         :zoom(clamp(1.1 - (math.abs(Offset) / 3), 0.8, 1.1))
+
       end,
 
       Def.Banner {
