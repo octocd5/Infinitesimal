@@ -49,11 +49,7 @@ local function MoveSelection(self, offset, Songs)
   if offset ~= 0 then
 
     for i = 1,13 do
-      local pos = CurSong + (5 * offset)
-
-      if offset == 1 then
-        pos = CurSong + (6 * offset)
-      end
+      local pos = CurSong + (6 * offset)
 
       while pos > #Songs do pos = pos-#Songs end
 			while pos < 1 do pos = #Songs+pos end
@@ -115,13 +111,12 @@ return function(Style)
       FOV=90,
 
       OnCommand=function(self)
-        self:ztest(true):zbuffer(true)
+        self:ztest(true):zbuffer(true):y(250):vanishpoint(SCREEN_CENTER_X, 600)
 
         self:x(Offset * (250 - Spacing * 100))
         :rotationy(clamp(Offset * 36, -85, 85))
         :z(-math.abs(Offset))
         :zoom(clamp(1.1 - (math.abs(Offset) / 3), 0.8, 1.1))
-
       end,
 
       Def.Banner {
