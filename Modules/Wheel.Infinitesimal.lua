@@ -68,6 +68,9 @@ local function MoveSelection(self, offset, Songs)
         :GetChild("Banner"):LoadFromCachedBanner(UpdateBanner(self, pos, Songs)):scaletoclipped(212, 120)
       end
 
+      self:GetChild("Wheel"):GetChild("Container"..i):GetChild("OffsetDisplay")
+      :settext(i - XOffset)
+
     end
 
   end
@@ -143,8 +146,19 @@ return function(Style)
     		InitCommand=function(self)
     			self:addy(-50):zoom(0.25)
     		end,
-    		OnCommand=function(self, params)
+    		OnCommand=function(self)
     				self:settext(pos)
+    		end
+    	},
+
+      Def.BitmapText {
+    		Font="Montserrat Semibold 40px",
+        Name="OffsetDisplay",
+    		InitCommand=function(self)
+    			self:addy(-100)
+    		end,
+    		OnCommand=function(self)
+    				self:settext(Offset)
     		end
     	}
     }
@@ -162,7 +176,7 @@ return function(Style)
 
     PlayCurrentSongCommand=function(self)
 			if type(Songs[CurSong]) ~= "string" and Songs[CurSong][1]:GetMusicPath() then
-				SOUND:PlayMusicPart(Songs[CurSong][1]:GetMusicPath(),Songs[CurSong][1]:GetSampleStart(),Songs[CurSong][1]:GetSampleLength(),0,0,true)
+				SOUND:PlayMusicPart(Songs[CurSong][1]:GetMusicPath(),Songs[CurSong][1]:GetSampleStart(),Songs[CurSong][1]:GetSampleLength(),0,0,false)
 			end
     end,
 
