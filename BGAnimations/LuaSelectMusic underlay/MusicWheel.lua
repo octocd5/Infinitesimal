@@ -20,20 +20,16 @@ local SongIsChosen = false
 local function InputHandler(event)
 	local pn = event.PlayerNumber
     if not pn then return end
-    
-    -- Don't want to move when releasing the button
-    if event.type == "InputEventType_Release" then return end
-
-    local button = event.button
-    
-    if button == "Start" or button == "MenuStart" or button == "Center" and 
-        not GAMESTATE:IsSideJoined(pn) and  then
 
     -- To avoid control from a player that has not joined, filter the inputs out
     if pn == PLAYER_1 and not GAMESTATE:IsPlayerEnabled(PLAYER_1) then return end
     if pn == PLAYER_2 and not GAMESTATE:IsPlayerEnabled(PLAYER_2) then return end
 
     if not SongIsChosen then
+        -- Don't want to move when releasing the button
+        if event.type == "InputEventType_Release" then return end
+
+        local button = event.button
         if button == "Left" or button == "MenuLeft" or button == "DownLeft" then
             CurrentIndex = CurrentIndex - 1
             if CurrentIndex < 1 then CurrentIndex = #Songs end

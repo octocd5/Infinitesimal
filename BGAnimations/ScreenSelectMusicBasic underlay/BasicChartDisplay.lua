@@ -88,6 +88,10 @@ local t = Def.ActorFrame {
     -- Prevent the chart list from moving when transitioning
     OffCommand=function(self)
         SongIsChosen = false
+        
+        -- Set these or else we crash.
+        GAMESTATE:SetCurrentPlayMode("PlayMode_Regular")
+        GAMESTATE:SetCurrentStyle(GAMESTATE:GetNumSidesJoined() > 1 and "versus" or "single")
     end,
     
     -- Update chart list

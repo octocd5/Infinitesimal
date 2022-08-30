@@ -21,7 +21,7 @@ function SelectMusicOrCourse()
     elseif getenv("IsBasicMode") then
         return "ScreenSelectMusicBasic"
     else
-        return "ScreenSelectMusic"
+        return "LuaSelectMusic"
     end
 end
 
@@ -41,7 +41,6 @@ CustomBranch = {
         if PROFILEMAN:GetNumLocalProfiles() > 0 then
             return "ScreenSelectProfile"
         else
-            setenv("IsBasicMode", true)
             return "ScreenSelectMusicBasic"
         end
     end,

@@ -1,8 +1,7 @@
 local t = Def.ActorFrame {
     OnCommand=function(self)
-        -- Change default sort to Basic Mode songs only
-        SONGMAN:SetPreferredSongs("PreferredSongs")
-        --SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Preferred")
+		-- Always important to set this variable
+		setenv("IsBasicMode", true)
         -- Change timing window to Easy
         LoadModule("Config.Save.lua")("SmartTimings",tostring("Pump Easy"),"Save/OutFoxPrefs.ini")
     end
@@ -23,7 +22,7 @@ t[#t+1] = Def.Quad {
     end
 }
 
-t[#t+1] = LoadActor("MusicWheel")..{ Name="MusicWheel" }
+t[#t+1] = LoadActor("MusicWheel") .. { Name="MusicWheel" }
 
 for pn in ivalues(GAMESTATE:GetEnabledPlayers()) do
     local spacing = (IsUsingWideScreen() and 80 or 15)
