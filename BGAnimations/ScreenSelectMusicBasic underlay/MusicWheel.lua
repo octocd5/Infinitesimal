@@ -7,6 +7,12 @@ local WheelRotation = 0.1
 local Songs = {}
 local Targets = {}
 
+-- Not load anything if Preferred Sort is not available, this silly check is done
+-- because the game will fallback to all songs present in the game install
+if #SONGMAN:GetPreferredSortSongs() == SONGMAN:GetNumSongs() then
+    return Def.Actor {}
+else
+
 for Song in ivalues(SONGMAN:GetPreferredSortSongs()) do
 	if SongUtil.GetPlayableSteps(Song) then
 		Songs[#Songs+1] = Song
@@ -26,8 +32,14 @@ local function InputHandler(event)
 
     local button = event.button
     
+    -- If an unjoined player attempts to join and has enough credits, join them
     if button == "Start" or button == "MenuStart" or button == "Center" and 
-        not GAMESTATE:IsSideJoined(pn) and  then
+        not GAMESTATE:IsSideJoined(pn) and GAMESTATE:GetCoins() >= GAMESTATE:GetCoinsNeededToJoin() then
+        GAMESTATE:JoinPlayer(pn)
+        -- The command above does not deduct credits so we'll do it ourselves
+        GAMESTATE:InsertCoin(-(GAMESTATE:GetCoinsNeededToJoin()))
+        MESSAGEMAN:Broadcast("PlayerJoined", { Player = pn })
+    end
 
     -- To avoid control from a player that has not joined, filter the inputs out
     if pn == PLAYER_1 and not GAMESTATE:IsPlayerEnabled(PLAYER_1) then return end
@@ -38,17 +50,17 @@ local function InputHandler(event)
             CurrentIndex = CurrentIndex - 1
             if CurrentIndex < 1 then CurrentIndex = #Songs end
             
+            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
             UpdateItemTargets(CurrentIndex)
             MESSAGEMAN:Broadcast("Scroll", { Direction = -1 })
-            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
 
         elseif button == "Right" or button == "MenuRight" or button == "DownRight" then
             CurrentIndex = CurrentIndex + 1
             if CurrentIndex > #Songs then CurrentIndex = 1 end
             
+            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
             UpdateItemTargets(CurrentIndex)
             MESSAGEMAN:Broadcast("Scroll", { Direction = 1 })
-            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
 
         elseif button == "Start" or button == "MenuStart" or button == "Center" then
             MESSAGEMAN:Broadcast("MusicWheelStart")
@@ -78,8 +90,8 @@ end
 
 local t = Def.ActorFrame {
     InitCommand=function(self)
-        self:y(SCREEN_HEIGHT / 2 + 150):fov(90):SetDrawByZPosition(true)
-        :vanishpoint(SCREEN_CENTER_X, SCREEN_BOTTOM-150)
+        self:y(SCREEN_HEIGHT / 2 + 155):fov(90):SetDrawByZPosition(true)
+        :vanishpoint(SCREEN_CENTER_X, SCREEN_BOTTOM - 150)
         UpdateItemTargets(CurrentIndex)
     end,
 
@@ -90,9 +102,12 @@ local t = Def.ActorFrame {
         self:easeoutexpo(1):y(SCREEN_HEIGHT / 2 - 150)
     end,
 
-    -- Prevent the song list from moving when transitioning
-    OffCommand=function(self)
-        SongIsChosen = true
+    CodeCommand=function(self, params)
+        if params.Name == "FullMode" then
+            -- Prevent the song list from moving when transitioning
+            SongIsChosen = true
+            self:finishtweening():sleep(1):easeoutexpo(1):y(SCREEN_HEIGHT / 2 + 155)
+        end
     end,
     
     -- Race condition workaround (yuck)
@@ -213,3 +228,5 @@ for i = 1, WheelSize do
 end
 
 return t
+
+end

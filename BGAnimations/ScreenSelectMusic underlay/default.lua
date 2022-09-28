@@ -1,21 +1,24 @@
--- The column thing
 local t = Def.ActorFrame {
-    Def.Quad {
-        InitCommand=function(self)
-            self:xy(SCREEN_CENTER_X,SCREEN_CENTER_Y):valign(0.5)
-            :zoomx(255)
-            :diffuse(0,0,0,0.75)
-            :zoomy(0)
-            :decelerate(0.5)
-            :zoomy(SCREEN_HEIGHT)
-        end,
-        OffCommand=function(self)
-            self:stoptweening():decelerate(0.5):zoomy(0)
-        end
-    }
+    OnCommand=function(self)
+        -- Always change sort back to groups, since Basic mode can leave it stuck in Preferred
+        SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Group")
+    end
 }
 
-t[#t+1] = LoadActor("MusicWheel") .. { Name="MusicWheel" }
+-- The column thing
+t[#t+1] = Def.Quad {
+    InitCommand=function(self)
+        self:xy(SCREEN_CENTER_X,SCREEN_CENTER_Y):valign(0.5)
+        :zoomx(255)
+        :diffuse(0,0,0,0.75)
+        :zoomy(0)
+        :decelerate(0.5)
+        :zoomy(SCREEN_HEIGHT)
+    end,
+    OffCommand=function(self)
+        self:stoptweening():decelerate(0.5):zoomy(0)
+    end
+}
 
 for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
     t[#t+1] = Def.ActorFrame {

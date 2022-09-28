@@ -14,7 +14,6 @@ local SongIsChosen = false
 local PreviewDelay = THEME:GetMetric("ScreenSelectMusic", "SampleMusicDelay")
 local CenterList = LoadModule("Config.Load.lua")("CenterChartList", "Save/OutFoxPrefs.ini")
 local CanWrap = LoadModule("Config.Load.lua")("WrapChartScroll", "Save/OutFoxPrefs.ini")
-local ConfirmStart = false
 
 -- http://lua-users.org/wiki/CopyTable
 function ShallowCopy(orig)
@@ -73,8 +72,6 @@ local function InputHandler(event)
                 ChartIndex[pn] = ChartIndex[pn] - 1
             end
             MESSAGEMAN:Broadcast("UpdateChartDisplay", { Player = pn })
-            MESSAGEMAN:Broadcast("StepsUnchosen", { Player = pn })
-            
         elseif button == "Right" or button == "MenuRight" or button == "DownRight" then
             if ChartIndex[pn] == #ChartArray then
                 if CanWrap then
@@ -84,25 +81,6 @@ local function InputHandler(event)
                 ChartIndex[pn] = ChartIndex[pn] + 1
             end
             MESSAGEMAN:Broadcast("UpdateChartDisplay", { Player = pn })
-            MESSAGEMAN:Broadcast("StepsUnchosen", { Player = pn })
-        
-        elseif button == "UpLeft" or button == "UpRight" or button == "Up" then
-            MESSAGEMAN:Broadcast("StepsUnchosen", { Player = pn })
-            MESSAGEMAN:Broadcast("SongUnchosen")
-            ConfirmStart = false
-            
-        elseif button == "Start" or button == "MenuStart" or button == "Center" then
-            if ConfirmStart then
-                SongIsChosen = false
-                
-                -- Set these or else we crash.
-                GAMESTATE:SetCurrentPlayMode("PlayMode_Regular")
-                GAMESTATE:SetCurrentStyle(GAMESTATE:GetNumSidesJoined() > 1 and "versus" or "single")
-                SCREENMAN:GetTopScreen():StartTransitioningScreen("SM_GoToNextScreen")
-            else
-                MESSAGEMAN:Broadcast("StepsChosen", { Player = pn })
-                ConfirmStart = true
-            end
         end
     end
     return
@@ -117,10 +95,6 @@ local t = Def.ActorFrame {
     -- Prevent the chart list from moving when transitioning
     OffCommand=function(self)
         SongIsChosen = false
-        
-        -- Set these or else we crash.
-        GAMESTATE:SetCurrentPlayMode("PlayMode_Regular")
-        GAMESTATE:SetCurrentStyle(GAMESTATE:GetNumSidesJoined() > 1 and "versus" or "single")
     end,
     
     -- This is done to workaround the loss of input when doing the command window pad code
@@ -147,10 +121,17 @@ local t = Def.ActorFrame {
 
     -- These are to control input and chart highlights appearing.
     SongChosenMessageCommand=function(self) SongIsChosen = true self:playcommand("Refresh") end,
-    SongUnchosenMessageCommand=function(self) SongIsChosen = false self:playcommand("Refresh") end,
+    SongUnchosenMessageCommand=function(self)
+        SongIsChosen = false
+        PlayerCanMove[PLAYER_1] = true
+        PlayerCanMove[PLAYER_2] = true
+        self:playcommand("Refresh")
+    end,
 
     OptionsListOpenedMessageCommand=function(self, params) PlayerCanMove[params.Player] = false end,
     OptionsListClosedMessageCommand=function(self, params) PlayerCanMove[params.Player] = true end,
+    StepsChosenMessageCommand=function(self, params) PlayerCanMove[params.Player] = false end,
+    StepsUnchosenMessageCommand=function(self, params) PlayerCanMove[params.Player] = true end,
 
     RefreshCommand=function(self)
         ChartArray = nil
@@ -178,17 +159,17 @@ local t = Def.ActorFrame {
                 end
             end
 
-            -- If no charts are left, load all of them again in an attempt to avoid other crashes
-            if #ChartArray == 0 then ChartArray = SongUtil.GetPlayableSteps(CurrentSong) end
-            table.sort(ChartArray, SortCharts)
-            
-            -- Couple and Routine crashes the game, if these are the only charts left you are out of luck
+            -- Couple and Routine crashes the game :(
             for i = #ChartArray, 1, -1 do
                 if string.find(ToUpper(ChartArray[i]:GetStepsType()), "ROUTINE") or
                     string.find(ToUpper(ChartArray[i]:GetStepsType()), "COUPLE") then
                     table.remove(ChartArray, i)
                 end
             end
+
+            -- If no charts are left, load all of them again in an attempt to avoid other crashes
+            if #ChartArray == 0 then ChartArray = SongUtil.GetPlayableSteps(CurrentSong) end
+            table.sort(ChartArray, SortCharts)
         end
 
         if ChartArray then

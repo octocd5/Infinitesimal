@@ -11,7 +11,10 @@ t[#t+1] = Def.Quad {
     end,
     ScreenChangedMessageCommand=function(self) self:queuecommand("Refresh") end,
     RefreshCommand=function(self)
-        self:linear(1):diffuse(getenv("IsBasicMode") == true and color("#0f2634") or color("#150F34"))
+        local BasicMode = getenv("IsBasicMode") == true
+        local NoSongs = #SONGMAN:GetPreferredSortSongs() == SONGMAN:GetNumSongs()
+        
+        self:linear(1):diffuse(BasicMode and (NoSongs and color("#340e13") or color("#0f2634")) or color("#150F34"))
     end
 }
 
@@ -25,7 +28,10 @@ t[#t+1] = Def.Sprite {
     end,
     ScreenChangedMessageCommand=function(self) self:queuecommand("Refresh") end,
     RefreshCommand=function(self)
-        self:linear(1):diffuse(getenv("IsBasicMode") == true and color("#285ebb") or color("#6028bb"))
+        local BasicMode = getenv("IsBasicMode") == true
+        local NoSongs = #SONGMAN:GetPreferredSortSongs() == SONGMAN:GetNumSongs()
+        
+        self:linear(1):diffuse(BasicMode and (NoSongs and color("#bb3b28") or color("#285ebb")) or color("#6028bb"))
     end
 }
 
@@ -51,7 +57,7 @@ t[#t+1] = Def.Sprite {
     Name="Circle1",
     Texture="Circle",
     InitCommand=function(self)
-        self:Center()
+        self:Center():zoom(0)
         :blend("BlendMode_Add")
         :queuecommand("Grow")
     end,
@@ -69,7 +75,7 @@ t[#t+1] = Def.Sprite {
     Texture="Circle",
     InitCommand=function(self)
         self:visible(false)
-        :Center()
+        :Center():zoom(0)
         :blend("BlendMode_Add")
         :sleep(1.7144)
         :queuecommand("Grow")
