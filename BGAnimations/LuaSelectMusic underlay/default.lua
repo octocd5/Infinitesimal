@@ -1,7 +1,42 @@
+setenv("IsBasicMode", false)
+
+-- Not load anything if no songs are available
+if SONGMAN:GetNumSongs() == 0 then
+    local function InputHandler(event)
+        local pn = event.PlayerNumber
+        if not pn then return end
+        
+        if event.type == "InputEventType_Release" then return end
+
+        local button = event.button
+        if button == "Back" then
+            SCREENMAN:GetTopScreen():Cancel()
+        end
+    end
+
+    return Def.ActorFrame {
+        OnCommand=function(self) 
+            SCREENMAN:GetTopScreen():AddInputCallback(InputHandler)
+        end,
+        
+        Def.Quad {
+            InitCommand=function(self) 
+                self:FullScreen():diffuse(Color.Black):diffusealpha(0)
+                :decelerate(1):diffusealpha(0.5)
+            end
+        },
+        
+        Def.BitmapText {
+            Font="Common normal",
+            Text=THEME:GetString("FullMode", "NoSongs"),
+            InitCommand=function(self) self:Center() end
+        }
+    }
+else
+
 local t = Def.ActorFrame {
     OnCommand=function(self)
-        -- Always change sort back to groups, since Basic mode can leave it stuck in Preferred
-        SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Group")
+        -- TODO: Set default Lua song wheel sort
     end
 }
 
@@ -19,6 +54,8 @@ t[#t+1] = Def.Quad {
         self:stoptweening():decelerate(0.5):zoomy(0)
     end
 }
+
+t[#t+1] = LoadActor("MusicWheel") .. { Name="MusicWheel" }
 
 for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
     t[#t+1] = Def.ActorFrame {
@@ -170,3 +207,5 @@ t[#t+1] = Def.ActorFrame {
 }
 
 return t
+
+end

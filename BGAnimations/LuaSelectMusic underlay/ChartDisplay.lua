@@ -11,6 +11,7 @@ local PlayerCanMove = { PlayerNumber_P1 = true, PlayerNumber_P2 = true }
 
 local ChartArray = nil
 local SongIsChosen = false
+local ConfirmStart = false
 local PreviewDelay = THEME:GetMetric("ScreenSelectMusic", "SampleMusicDelay")
 local CenterList = LoadModule("Config.Load.lua")("CenterChartList", "Save/OutFoxPrefs.ini")
 local CanWrap = LoadModule("Config.Load.lua")("WrapChartScroll", "Save/OutFoxPrefs.ini")
@@ -72,6 +73,8 @@ local function InputHandler(event)
                 ChartIndex[pn] = ChartIndex[pn] - 1
             end
             MESSAGEMAN:Broadcast("UpdateChartDisplay", { Player = pn })
+            ConfirmStart = false
+            
         elseif button == "Right" or button == "MenuRight" or button == "DownRight" then
             if ChartIndex[pn] == #ChartArray then
                 if CanWrap then
@@ -81,6 +84,25 @@ local function InputHandler(event)
                 ChartIndex[pn] = ChartIndex[pn] + 1
             end
             MESSAGEMAN:Broadcast("UpdateChartDisplay", { Player = pn })
+            ConfirmStart = false
+        
+        elseif button == "UpLeft" or button == "UpRight" or button == "Up" then
+            MESSAGEMAN:Broadcast("StepsUnchosen", { Player = pn })
+            MESSAGEMAN:Broadcast("SongUnchosen")
+            ConfirmStart = false
+            
+        elseif button == "Start" or button == "MenuStart" or button == "Center" then
+            if ConfirmStart then
+                SongIsChosen = false
+                
+                -- Set these or else we crash.
+                GAMESTATE:SetCurrentPlayMode("PlayMode_Regular")
+                GAMESTATE:SetCurrentStyle(GAMESTATE:GetNumSidesJoined() > 1 and "versus" or "single")
+                SCREENMAN:GetTopScreen():StartTransitioningScreen("SM_GoToNextScreen")
+            else
+                MESSAGEMAN:Broadcast("StepsChosen", { Player = pn })
+                ConfirmStart = true
+            end
         end
     end
     return
@@ -130,8 +152,6 @@ local t = Def.ActorFrame {
 
     OptionsListOpenedMessageCommand=function(self, params) PlayerCanMove[params.Player] = false end,
     OptionsListClosedMessageCommand=function(self, params) PlayerCanMove[params.Player] = true end,
-    StepsChosenMessageCommand=function(self, params) PlayerCanMove[params.Player] = false end,
-    StepsUnchosenMessageCommand=function(self, params) PlayerCanMove[params.Player] = true end,
 
     RefreshCommand=function(self)
         ChartArray = nil

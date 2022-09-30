@@ -57,7 +57,7 @@ t[#t+1] = Def.Quad {
     end
 }
 
-t[#t+1] = LoadActor("MusicWheel")..{ Name="MusicWheel" }
+t[#t+1] = LoadActor("MusicWheel") .. { Name="MusicWheel" }
 
 for pn in ivalues(GAMESTATE:GetEnabledPlayers()) do
     local spacing = (IsUsingWideScreen() and 80 or 15)
