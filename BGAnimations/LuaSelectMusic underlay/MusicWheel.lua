@@ -1,33 +1,37 @@
-local WheelSize = 13
-local WheelCenter = math.ceil( WheelSize * 0.5 )
-local WheelItem = { Width = 212, Height = 120 }
-local WheelSpacing = 250
-local WheelRotation = 0.1
-
-local Songs = {}
-local Targets = {}
-
 -- Not load anything if no songs are available
 if SONGMAN:GetNumSongs() == 0 then
     return Def.Actor {}
 else
 
--- Load all songs available by default
+local WheelSize = 13
+local WheelCenter = math.ceil( WheelSize * 0.5 )
+local WheelItem = { Width = 212, Height = 120 }
+local WheelSpacing = 250
+local WheelRotation = 0.1
+local Targets = {}
+
+local Songs = {}
+
+-- Filter out unplayable songs
 for Song in ivalues(SONGMAN:GetAllSongs()) do
-	if SongUtil.GetPlayableSteps(Song)[1] then
+	if #SongUtil.GetPlayableSteps(Song) > 0 then
 		Songs[#Songs+1] = Song
 	end
 end
 
-local function FilterSongs(SongGroup)
-    local Filtered = {}
-    for Song in ivalues(SongGroup) do
-        if SongUtil.GetPlayableSteps(SongGroup)[1] then
-            Filtered[#Filtered+1] = Song
+local Groups = {}
+
+-- Filter groups out with only unplayable songs
+for Group in ivalues(SONGMAN:GetSongGroupNames()) do
+    for Song in ivalues(SONGMAN:GetSongsInGroup(Group)) do
+        if #SongUtil.GetPlayableSteps(Song) > 0 then
+            Groups[#Groups+1] = Group
+            break
         end
     end
-    return Filtered
 end
+
+Songs = FilterSongs(SONGMAN:GetSongsInGroup(Groups[#Groups - 8]))
 
 local CurrentIndex = math.random(#Songs)
 if LastSongIndex ~= 0 then CurrentIndex = LastSongIndex end
