@@ -1,44 +1,4 @@
-setenv("IsBasicMode", false)
-
--- Not load anything if no songs are available
-if SONGMAN:GetNumSongs() == 0 then
-    local function InputHandler(event)
-        local pn = event.PlayerNumber
-        if not pn then return end
-        
-        if event.type == "InputEventType_Release" then return end
-
-        local button = event.button
-        if button == "Back" then
-            SCREENMAN:GetTopScreen():Cancel()
-        end
-    end
-
-    return Def.ActorFrame {
-        OnCommand=function(self) 
-            SCREENMAN:GetTopScreen():AddInputCallback(InputHandler)
-        end,
-        
-        Def.Quad {
-            InitCommand=function(self) 
-                self:FullScreen():diffuse(Color.Black):diffusealpha(0)
-                :decelerate(1):diffusealpha(0.5)
-            end
-        },
-        
-        Def.BitmapText {
-            Font="Common normal",
-            Text=THEME:GetString("FullMode", "NoSongs"),
-            InitCommand=function(self) self:Center() end
-        }
-    }
-else
-
-local t = Def.ActorFrame {
-    OnCommand=function(self)
-        -- TODO: Set default Lua song wheel sort
-    end
-}
+local t = Def.ActorFrame {}
 
 -- The column thing
 t[#t+1] = Def.Quad {
@@ -55,7 +15,7 @@ t[#t+1] = Def.Quad {
     end
 }
 
-t[#t+1] = LoadActor("MusicWheel") .. { Name="MusicWheel" }
+t[#t+1] = LoadActor("MusicWheel")..{ Name="MusicWheel" }
 
 for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
     t[#t+1] = Def.ActorFrame {
@@ -100,6 +60,10 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                     self:stoptweening():easeoutexpo(0.5)
                     :x(SCREEN_CENTER_X + (pn == PLAYER_2 and 380 or -380))
                 end
+            end,
+			
+			UpdateChartDisplayMessageCommand=function(self, params) if params.Player == pn then
+                self:stoptweening():easeoutexpo(0.5):x(SCREEN_CENTER_X) end
             end,
             StepsUnchosenMessageCommand=function(self)
                 self:stoptweening():easeoutexpo(0.5):x(SCREEN_CENTER_X)
@@ -207,5 +171,3 @@ t[#t+1] = Def.ActorFrame {
 }
 
 return t
-
-end

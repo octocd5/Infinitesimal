@@ -1,41 +1,27 @@
--- Not load anything if no songs are available
-if SONGMAN:GetNumSongs() == 0 then
-    return Def.Actor {}
-else
-
 local WheelSize = 13
 local WheelCenter = math.ceil( WheelSize * 0.5 )
 local WheelItem = { Width = 212, Height = 120 }
 local WheelSpacing = 250
 local WheelRotation = 0.1
-local Targets = {}
 
 local Songs = {}
+local Targets = {}
 
--- Filter out unplayable songs
-for Song in ivalues(SONGMAN:GetAllSongs()) do
-	if #SongUtil.GetPlayableSteps(Song) > 0 then
-		Songs[#Songs+1] = Song
-	end
-end
+Trace("Creating group sorts....")
+RunGroupSorting()
 
-local Groups = {}
+-- Not load anything if no group sorts are available (catastrophic event or no songs)
+if next(SortGroups) == nil then
+    return Def.Actor {}
+else
 
--- Filter groups out with only unplayable songs
-for Group in ivalues(SONGMAN:GetSongGroupNames()) do
-    for Song in ivalues(SONGMAN:GetSongsInGroup(Group)) do
-        if #SongUtil.GetPlayableSteps(Song) > 0 then
-            Groups[#Groups+1] = Group
-            break
-        end
-    end
-end
-
-Songs = FilterSongs(SONGMAN:GetSongsInGroup(Groups[#Groups - 8]))
-
-local CurrentIndex = math.random(#Songs)
-if LastSongIndex ~= 0 then CurrentIndex = LastSongIndex end
+local SongIndex = 1
+if LastSongIndex ~= 0 then SongIndex = LastSongIndex end
+local GroupIndex = 1
+if LastGroupIndex ~= 0 then GroupIndex = LastGroupIndex end
 local SongIsChosen = false
+
+Songs = SortGroups[GroupIndex].Songs
 
 local function InputHandler(event)
 	local pn = event.PlayerNumber
@@ -47,7 +33,7 @@ local function InputHandler(event)
     local button = event.button
     
     -- If an unjoined player attempts to join and has enough credits, join them
-    if button == "Start" or button == "MenuStart" or button == "Center" and 
+    if (button == "Center" or (not IsGame("pump") and button == "Start")) and 
         not GAMESTATE:IsSideJoined(pn) and GAMESTATE:GetCoins() >= GAMESTATE:GetCoinsNeededToJoin() then
         GAMESTATE:JoinPlayer(pn)
         -- The command above does not deduct credits so we'll do it ourselves
@@ -61,20 +47,40 @@ local function InputHandler(event)
 
     if not SongIsChosen then
         if button == "Left" or button == "MenuLeft" or button == "DownLeft" then
-            CurrentIndex = CurrentIndex - 1
-            if CurrentIndex < 1 then CurrentIndex = #Songs end
+            SongIndex = SongIndex - 1
+            if SongIndex < 1 then SongIndex = #Songs end
             
-            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
-            UpdateItemTargets(CurrentIndex)
+            GAMESTATE:SetCurrentSong(Songs[SongIndex])
+            UpdateItemTargets(SongIndex)
             MESSAGEMAN:Broadcast("Scroll", { Direction = -1 })
 
         elseif button == "Right" or button == "MenuRight" or button == "DownRight" then
-            CurrentIndex = CurrentIndex + 1
-            if CurrentIndex > #Songs then CurrentIndex = 1 end
+            SongIndex = SongIndex + 1
+            if SongIndex > #Songs then SongIndex = 1 end
             
-            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
-            UpdateItemTargets(CurrentIndex)
+            GAMESTATE:SetCurrentSong(Songs[SongIndex])
+            UpdateItemTargets(SongIndex)
             MESSAGEMAN:Broadcast("Scroll", { Direction = 1 })
+			
+		elseif button == "UpLeft" then
+            GroupIndex = GroupIndex - 1
+            if GroupIndex < 1 then GroupIndex = #SortGroups end
+            
+			SongIndex = 1
+			Songs = SortGroups[GroupIndex].Songs
+            GAMESTATE:SetCurrentSong(Songs[SongIndex])
+            UpdateItemTargets(SongIndex)
+			MESSAGEMAN:Broadcast("ForceUpdate")
+			
+		elseif button == "UpRight" then
+            GroupIndex = GroupIndex + 1
+            if GroupIndex > #SortGroups then GroupIndex = 1 end
+            
+			SongIndex = 1
+			Songs = SortGroups[GroupIndex].Songs
+            GAMESTATE:SetCurrentSong(Songs[SongIndex])
+            UpdateItemTargets(SongIndex)
+			MESSAGEMAN:Broadcast("ForceUpdate")
 
         elseif button == "Start" or button == "MenuStart" or button == "Center" then
             MESSAGEMAN:Broadcast("MusicWheelStart")
@@ -97,23 +103,20 @@ function UpdateItemTargets(val)
     end
 end
 
--- Manages banner on sprite, apparently loading it twice
--- makes the game cache it and performance is much better
+-- Manages banner on sprite
 function UpdateBanner(self, Song)
-    self:LoadFromSongBanner(Song)
-    :LoadFromSongBanner(Song)
-    :scaletoclipped(WheelItem.Width, WheelItem.Height)
+    self:LoadFromSongBanner(Song):scaletoclipped(WheelItem.Width, WheelItem.Height)
 end
 
 local t = Def.ActorFrame {
     InitCommand=function(self)
         self:y(SCREEN_HEIGHT / 2 + 155):fov(90):SetDrawByZPosition(true)
         :vanishpoint(SCREEN_CENTER_X, SCREEN_BOTTOM - 150)
-        UpdateItemTargets(CurrentIndex)
+        UpdateItemTargets(SongIndex)
     end,
 
     OnCommand=function(self)
-        GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
+        GAMESTATE:SetCurrentSong(Songs[SongIndex])
         SCREENMAN:GetTopScreen():AddInputCallback(InputHandler)
 
         self:easeoutexpo(1):y(SCREEN_HEIGHT / 2 - 150)
@@ -180,10 +183,18 @@ for i = 1, WheelSize do
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("Scroll", {Direction = 0})
         end,
+		
+		ForceUpdateMessageCommand=function(self)
+			-- Load banner
+            UpdateBanner(self:GetChild("Banner"), Songs[Targets[i]])
+
+            -- Set initial position, Direction = 0 means it won't tween
+            self:playcommand("Scroll", {Direction = 0})
+		end,
 
         ScrollMessageCommand=function(self,param)
             -- Save this so that we can resume the last selection after gameplay
-            LastSongIndex = CurrentIndex
+            LastSongIndex = SongIndex
             
             self:stoptweening()
 

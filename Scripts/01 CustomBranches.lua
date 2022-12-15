@@ -21,7 +21,7 @@ function SelectMusicOrCourse()
     elseif getenv("IsBasicMode") then
         return "ScreenSelectMusicBasic"
     else
-        return "LuaSelectMusic"
+        return "ScreenSelectMusicFull"
     end
 end
 
@@ -35,7 +35,9 @@ end
 
 CustomBranch = {
     StartGame = function()
-        -- Each select music screen now has its own check for lack of songs
+        if SONGMAN:GetNumSongs() == 0 and SONGMAN:GetNumAdditionalSongs() == 0 then
+            return "ScreenHowToInstallSongs"
+        end
         if PROFILEMAN:GetNumLocalProfiles() > 0 then
             return "ScreenSelectProfile"
         else
