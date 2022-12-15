@@ -1,3 +1,6 @@
+-- These will be used for the Lua music wheels.
+SongIndex = 1
+GroupIndex = 1
 LastSongIndex = 0
 LastGroupIndex = 0
 
