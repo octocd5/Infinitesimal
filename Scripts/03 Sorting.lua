@@ -4,7 +4,8 @@ SortGroups = {}
 function PlayableSongs(SongList)
 	local SongTable = {}
 	for Song in ivalues(SongList) do
-		if SongUtil.GetPlayableSteps(Song) then
+        local Steps = SongUtil.GetPlayableSteps(Song)
+		if #Steps > 0 then
 			SongTable[#SongTable+1] = Song
 		end
 	end
