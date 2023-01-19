@@ -187,6 +187,8 @@ for i = 1, WheelSize do
 		ForceUpdateMessageCommand=function(self)
 			-- Load banner
             UpdateBanner(self:GetChild("Banner"), Songs[Targets[i]])
+            
+            SCREENMAN:SystemMessage(SortGroups[GroupIndex].Name)
 
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("Scroll", {Direction = 0})

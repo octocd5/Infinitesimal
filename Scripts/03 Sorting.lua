@@ -1,6 +1,17 @@
 -- Our main table which will contain all sorted groups.
 SortGroups = {}
 
+function GetValue( t, value )
+    for k, v in pairs(t) do
+        if v == value then return k end
+    end
+    return nil
+end
+
+function SortSongsByTitle(a, b)
+    return ToLower(a:GetTranslitFullTitle()) < ToLower(b:GetTranslitFullTitle())
+end
+
 function PlayableSongs(SongList)
 	local SongTable = {}
 	for Song in ivalues(SongList) do
@@ -18,9 +29,21 @@ function RunGroupSorting()
         return
     end
 	
-	-- Empty current table if needed
+	-- Empty current table
 	SortGroups = {}
+    
+    -- All songs available
+    local AllSongs = PlayableSongs(SONGMAN:GetAllSongs())
+    
+    SortGroups[#SortGroups + 1] = {
+        Name = "All",
+        Banner = THEME:GetPathG("", "Common fallback banner"),
+        Songs = AllSongs
+    }
+    
+    Trace("Group added: " .. SortGroups[#SortGroups].Name)
 
+    -- Song groups
 	local SongGroups = {}
 
 	-- Iterate through the song groups and check if they have AT LEAST one song with valid charts.
@@ -35,13 +58,50 @@ function RunGroupSorting()
 		end
 	end
 
-	for i,v in ipairs(SongGroups) do
+	for i, v in ipairs(SongGroups) do
 		SortGroups[#SortGroups + 1] = {
 			Name = SongGroups[i],
 			Banner = SONGMAN:GetSongGroupBannerPath(SongGroups[i]),
 			Songs = PlayableSongs(SONGMAN:GetSongsInGroup(SongGroups[i]))
 		}
+        
 		Trace("Group added: " .. SongGroups[i])
+	end
+    
+    -- Alphabet order
+    local Alphabet = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#"}
+    local AlphabetGroups = {}
+    local SongInserted = false
+    
+    for j, Song in ipairs(AllSongs) do
+        SongInserted = false
+        
+        for i, Letter in ipairs(Alphabet) do -- Skip last item
+            if ToUpper(Song:GetDisplayMainTitle():sub(1, 1)) == Letter then
+                if AlphabetGroups[Letter] == nil then AlphabetGroups[Letter] = {} end
+                table.insert(AlphabetGroups[Letter], Song)
+                SongInserted = true
+                break
+            end
+		end
+        
+        if SongInserted == false then
+            if AlphabetGroups["#"] == nil then AlphabetGroups["#"] = {} end
+            table.insert(AlphabetGroups["#"], Song)
+        end
+    end
+    
+    for i, v in pairs(Alphabet) do
+        if AlphabetGroups[v] ~= nil then
+            table.sort(AlphabetGroups[v], SortSongsByTitle)
+            SortGroups[#SortGroups + 1] = {
+                Name = v,
+                Banner = THEME:GetPathG("", "Common fallback banner"), -- something appending v at the end
+                Songs = AlphabetGroups[v],
+            }
+        end
+        
+		Trace("Group added: " .. SortGroups[#SortGroups].Name)
 	end
 	
 	Trace("Group sorting done!")
