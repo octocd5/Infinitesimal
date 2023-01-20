@@ -1,14 +1,38 @@
 -- Our main table which will contain all sorted groups.
 SortGroups = {}
 
-function GetValue( t, value )
+local function GetValue(t, value)
     for k, v in pairs(t) do
         if v == value then return k end
     end
     return nil
 end
 
-function SortSongsByTitle(a, b)
+local function HasValue(tab, val)
+    for index, value in ipairs(tab) do
+        if value == val then
+            return true
+        end
+    end
+
+    return false
+end
+
+local function PairsByKeys(t, f)
+    local a = {}
+    for n in pairs(t) do table.insert(a, n) end
+    table.sort(a, f)
+    local i = 0      -- iterator variable
+    local iter = function ()   -- iterator function
+        i = i + 1
+        if a[i] == nil then return nil
+        else return a[i], t[a[i]]
+        end
+    end
+    return iter
+end
+
+local function SortSongsByTitle(a, b)
     return ToLower(a:GetTranslitFullTitle()) < ToLower(b:GetTranslitFullTitle())
 end
 
@@ -76,7 +100,7 @@ function RunGroupSorting()
     for j, Song in ipairs(AllSongs) do
         SongInserted = false
         
-        for i, Letter in ipairs(Alphabet) do -- Skip last item
+        for i, Letter in ipairs(Alphabet) do
             if ToUpper(Song:GetDisplayMainTitle():sub(1, 1)) == Letter then
                 if AlphabetGroups[Letter] == nil then AlphabetGroups[Letter] = {} end
                 table.insert(AlphabetGroups[Letter], Song)
@@ -100,6 +124,54 @@ function RunGroupSorting()
                 Songs = AlphabetGroups[v],
             }
         end
+        
+		Trace("Group added: " .. SortGroups[#SortGroups].Name)
+	end
+    
+    -- Level order (single and double)
+    local LevelGroups = {}
+    
+    for j, Song in ipairs(AllSongs) do
+        for i, Chart in ipairs(SongUtil.GetPlayableSteps(Song)) do
+            if ToEnumShortString(ToEnumShortString(Chart:GetStepsType())) == "Single" then
+                local ChartLevel = Chart:GetMeter()
+                if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
+                if not HasValue(LevelGroups[ChartLevel], Song) then
+                table.insert(LevelGroups[ChartLevel], Song) end
+            end
+		end
+    end
+    
+    for i, v in PairsByKeys(LevelGroups) do
+        SortGroups[#SortGroups + 1] = {
+            Name = "Single " .. i,
+            Banner = THEME:GetPathG("", "Common fallback banner"), -- something appending v at the end
+            Songs = v,
+        }
+        
+		Trace("Group added: " .. SortGroups[#SortGroups].Name)
+	end
+    
+    -- Reset table (yes I am this lazy)
+    LevelGroups = {}
+    
+    for j, Song in ipairs(AllSongs) do
+        for i, Chart in ipairs(SongUtil.GetPlayableSteps(Song)) do
+            if ToEnumShortString(ToEnumShortString(Chart:GetStepsType())) == "Double" then
+                local ChartLevel = Chart:GetMeter()
+                if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
+                if not HasValue(LevelGroups[ChartLevel], Song) then
+                table.insert(LevelGroups[ChartLevel], Song) end
+            end
+		end
+    end
+    
+    for i, v in PairsByKeys(LevelGroups) do
+        SortGroups[#SortGroups + 1] = {
+            Name = "Double " .. i,
+            Banner = THEME:GetPathG("", "Common fallback banner"), -- something appending v at the end
+            Songs = v,
+        }
         
 		Trace("Group added: " .. SortGroups[#SortGroups].Name)
 	end
