@@ -62,11 +62,11 @@ function RunGroupSorting()
     local AllSongs = PlayableSongs(SONGMAN:GetAllSongs())
     
     SortGroups[#SortGroups + 1] = {
-        Name = "All",
+        Name = "Special",
         Banner = THEME:GetPathG("", "Common fallback banner"),
         SubGroups = {
             {   
-                Name = "All",
+                Name = "All Tunes",
                 Banner = THEME:GetPathG("", "Common fallback banner"),
                 Songs = AllSongs
             }
@@ -75,6 +75,62 @@ function RunGroupSorting()
     
     Trace("Group added: " .. SortGroups[#SortGroups].Name .. "/" .. 
     SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
+    
+    -- ======================================== Co-op charts ========================================
+    
+    local CoopSongs = {}
+    for j, Song in ipairs(AllSongs) do
+        for i, Chart in ipairs(SongUtil.GetPlayableSteps(Song)) do
+            local ChartMeter = Chart:GetMeter()
+            local ChartDescription = Chart:GetDescription()
+            
+            ChartDescription:gsub("[%p%c%s]", "")
+            if string.find(string.upper(ChartDescription), "DP") or
+            string.find(string.upper(ChartDescription), "COOP") then
+                if ChartMeter == 99 then
+                   table.insert(CoopSongs, Song)
+                   break
+                end
+            end
+		end
+    end
+    
+    SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups + 1] = {
+        Name = "Co-op",
+        Banner = THEME:GetPathG("", "Common fallback banner"), -- something appending v at the end
+        Songs = CoopSongs,
+    }
+        
+    Trace("Group added: " .. SortGroups[#SortGroups].Name .. "/" .. 
+    SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
+    
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Songs == 0 then 
+        table.remove(SortGroups[#SortGroups].SubGroups) 
+    end
+    
+    -- ======================================== Shortcuts ========================================
+    
+    local Shortcuts = {}
+    for j, Song in ipairs(AllSongs) do
+        if Song:GetLastSecond() < 75 then
+           table.insert(Shortcuts, Song)
+        end
+    end
+    
+    SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups + 1] = {
+        Name = "Shortcut",
+        Banner = THEME:GetPathG("", "Common fallback banner"), -- something appending v at the end
+        Songs = Shortcuts,
+    }
+        
+    Trace("Group added: " .. SortGroups[#SortGroups].Name .. "/" .. 
+    SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
+    
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Songs == 0 then 
+        table.remove(SortGroups[#SortGroups].SubGroups) 
+    end
 
     -- ======================================== Song groups ========================================
 	local SongGroups = {}
@@ -215,7 +271,9 @@ function RunGroupSorting()
                 local ChartLevel = Chart:GetMeter()
                 if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
                 if not HasValue(LevelGroups[ChartLevel], Song) then
-                table.insert(LevelGroups[ChartLevel], Song) end
+                    table.insert(LevelGroups[ChartLevel], Song) 
+                    break 
+                end
             end
 		end
     end
@@ -248,7 +306,9 @@ function RunGroupSorting()
                 local ChartLevel = Chart:GetMeter()
                 if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
                 if not HasValue(LevelGroups[ChartLevel], Song) then
-                table.insert(LevelGroups[ChartLevel], Song) end
+                    table.insert(LevelGroups[ChartLevel], Song) 
+                    break 
+                end
             end
 		end
     end
@@ -281,7 +341,9 @@ function RunGroupSorting()
                 local ChartLevel = Chart:GetMeter()
                 if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
                 if not HasValue(LevelGroups[ChartLevel], Song) then
-                table.insert(LevelGroups[ChartLevel], Song) end
+                    table.insert(LevelGroups[ChartLevel], Song) 
+                    break 
+                end
             end
 		end
     end

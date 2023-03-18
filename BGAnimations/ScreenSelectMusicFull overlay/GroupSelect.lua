@@ -33,8 +33,8 @@ local SubTargets = {}
 local OrigGroupIndex = 2
 
 local function BlockScreenInput(State)
-    SCREENMAN:set_input_redirected(PLAYER_1, State)
-    SCREENMAN:set_input_redirected(PLAYER_2, State)
+    --SCREENMAN:set_input_redirected(PLAYER_1, State)
+    --SCREENMAN:set_input_redirected(PLAYER_2, State)
 end
 
 -- If no songs don't load anything
