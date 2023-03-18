@@ -26,6 +26,9 @@ function SelectMusicOrCourse()
 		setenv("IsBasicMode", true)
 	end
     
+    -- This is vital for both the music and group wheel
+    RunGroupSorting()
+    
     if GAMESTATE:IsCourseMode() then
         return "ScreenSelectCourse"
     elseif getenv("IsBasicMode") and UseBasicMode then

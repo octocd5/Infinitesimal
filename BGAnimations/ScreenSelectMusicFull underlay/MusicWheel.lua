@@ -15,7 +15,6 @@ else
 local SongIndex = 1
 local IsBusy = false
 
-RunGroupSorting()
 -- Default is to start at All for now
 Songs = SortGroups[1].SubGroups[1].Songs
 

@@ -99,6 +99,7 @@ local function InputHandler(event)
                 
                 MESSAGEMAN:Broadcast("ScrollSub", { Direction = -1 })
             end
+            
         elseif button == "Right" or button == "MenuRight" or button == "DownRight" then
             if IsFocusedMain then
                 CurMainIndex = CurMainIndex + 1
@@ -152,8 +153,6 @@ local function InputHandler(event)
             end
         end
     end
-
-	MESSAGEMAN:Broadcast("UpdateMusic")
 end
 
 local t = Def.ActorFrame {
@@ -167,13 +166,13 @@ local t = Def.ActorFrame {
     OnCommand=function(self)
         BlockScreenInput(false)
         ScreenSelectMusic = SCREENMAN:GetTopScreen()
-        SCREENMAN:GetTopScreen():AddInputCallback(InputHandler)
+        ScreenSelectMusic:AddInputCallback(InputHandler)
     end,
     
     OffCommand=function(self) BlockScreenInput(false) end,
     
-    SongChosenMessageCommand=function(self) IsBusy = true end,
-    SongUnchosenMessageCommand=function(self) self:queuecommand("NotBusy") end,
+    SongChosenMessageCommand=function(self) self:queuecommand("Busy") end,
+    SongUnchosenMessageCommand=function(self) self:sleep(0.01):queuecommand("NotBusy") end,
     
     OptionsListOpenedMessageCommand=function(self, params) IsOptionsList[params.Player] = true end,
     OptionsListClosedMessageCommand=function(self, params) IsOptionsList[params.Player] = false end,
@@ -201,7 +200,7 @@ local t = Def.ActorFrame {
         IsSelectingGroup = false
         
         -- The built in wheel needs to be told the group has been changed
-        SCREENMAN:GetTopScreen():PostScreenMessage("SM_SongChanged", 0 )
+        ScreenSelectMusic:PostScreenMessage("SM_SongChanged", 0 )
         MESSAGEMAN:Broadcast("StartSelectingSong")
     end,
     

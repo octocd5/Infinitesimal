@@ -23,6 +23,16 @@ local CurrentIndex = math.random(#Songs)
 if LastSongIndex ~= 0 then CurrentIndex = LastSongIndex end
 local SongIsChosen = false
 
+-- Update Songs item targets
+local function UpdateItemTargets(val)
+    for i = 1, WheelSize do
+        Targets[i] = val + i - WheelCenter
+        -- Wrap to fit to Songs list size
+        while Targets[i] > #Songs do Targets[i] = Targets[i] - #Songs end
+        while Targets[i] < 1 do Targets[i] = Targets[i] + #Songs end
+    end
+end
+
 local function InputHandler(event)
 	local pn = event.PlayerNumber
     if not pn then return end
@@ -71,16 +81,6 @@ local function InputHandler(event)
     end
 
 	MESSAGEMAN:Broadcast("UpdateMusic")
-end
-
--- Update Songs item targets
-local function UpdateItemTargets(val)
-    for i = 1, WheelSize do
-        Targets[i] = val + i - WheelCenter
-        -- Wrap to fit to Songs list size
-        while Targets[i] > #Songs do Targets[i] = Targets[i] - #Songs end
-        while Targets[i] < 1 do Targets[i] = Targets[i] + #Songs end
-    end
 end
 
 -- Manages banner on sprite
