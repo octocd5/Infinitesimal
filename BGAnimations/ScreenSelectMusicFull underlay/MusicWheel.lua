@@ -113,8 +113,12 @@ local t = Def.ActorFrame {
     
     OpenGroupWheelMessageCommand=function(self) IsBusy = true end,
     CloseGroupWheelMessageCommand=function(self) 
+        -- Grab the new list of songs from the selected group
         Songs = SortGroups[GroupIndex].SubGroups[SubGroupIndex].Songs
+        -- Reset back to the first song of the list
+        SongIndex = 1
         GAMESTATE:SetCurrentSong(Songs[SongIndex])
+        -- Update wheel yada yada
         UpdateItemTargets(SongIndex)
         MESSAGEMAN:Broadcast("ForceUpdate")
         self:sleep(0.01):queuecommand("NotBusy")
@@ -167,7 +171,7 @@ for i = 1, WheelSize do
 			-- Load banner
             UpdateBanner(self:GetChild("Banner"), Songs[Targets[i]])
             
-            SCREENMAN:SystemMessage(SortGroups[GroupIndex].Name)
+            --SCREENMAN:SystemMessage(SortGroups[GroupIndex].Name)
 
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("Scroll", {Direction = 0})

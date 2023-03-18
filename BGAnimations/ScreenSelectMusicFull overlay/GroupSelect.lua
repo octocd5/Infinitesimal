@@ -90,7 +90,7 @@ local function InputHandler(event)
                 UpdateSubItemTargets(CurSubIndex)
                 
                 MESSAGEMAN:Broadcast("ScrollMain", { Direction = -1 })
-                MESSAGEMAN:Broadcast("ScrollSub", { Direction = 0 })
+                MESSAGEMAN:Broadcast("RefreshSub")
             else
                 CurSubIndex = CurSubIndex - 1
                 if CurSubIndex < 1 then CurSubIndex = #SortGroups[CurMainIndex].SubGroups end
@@ -110,7 +110,7 @@ local function InputHandler(event)
                 UpdateSubItemTargets(CurSubIndex)
                 
                 MESSAGEMAN:Broadcast("ScrollMain", { Direction = 1 })
-                MESSAGEMAN:Broadcast("ScrollSub", { Direction = 0 })
+                MESSAGEMAN:Broadcast("RefreshSub")
             else
                 CurSubIndex = CurSubIndex + 1
                 if CurSubIndex > #SortGroups[CurMainIndex].SubGroups then CurSubIndex = 1 end
@@ -183,15 +183,17 @@ local t = Def.ActorFrame {
             if not IsBusy and not IsOptionsList[PLAYER_1] and not IsOptionsList[PLAYER_2] then
                 -- Prevent the song list from moving when transitioning
                 BlockScreenInput(true)
-                IsSelectingGroup = true
                 MESSAGEMAN:Broadcast("OpenGroupWheel")
-                self:finishtweening():easeoutexpo(1):diffusealpha(1)
+                self:stoptweening():sleep(0.01):queuecommand("OpenGroup"):easeoutexpo(1):diffusealpha(1)
             end
         end
     end,
     
     BusyCommand=function(self) IsBusy = true end,
     NotBusyCommand=function(self) IsBusy = false end,
+    
+    OpenGroupCommand=function(self) IsSelectingGroup = true end,
+    CloseGroupCommand=function(self) IsSelectingGroup = false end,
     
     CloseGroupWheelMessageCommand=function(self)
         self:stoptweening():easeoutexpo(0.25):diffusealpha(0)
@@ -304,6 +306,8 @@ for i = 1, WheelSize do
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("ScrollSub", {Direction = 0})
         end,
+        
+        RefreshSubMessageCommand=function(self, params) self:playcommand("On") end,
 
         ScrollSubMessageCommand=function(self, params)
             self:stoptweening()
