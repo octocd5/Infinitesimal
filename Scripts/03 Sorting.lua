@@ -107,6 +107,9 @@ function RunGroupSorting()
         SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
 	end
     
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups == 0 then table.remove(SortGroups) end
+    
     --[[ Remove these for now since ToUpper crashes with Hangul chars
     -- ======================================== Song titles ========================================
     local Alphabet = {"A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#"}
@@ -150,6 +153,9 @@ function RunGroupSorting()
         SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
 	end
     
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups == 0 then table.remove(SortGroups) end
+    
     -- ======================================== Song artists ========================================
     local ArtistGroups = {}
     local SongInserted = false
@@ -190,6 +196,9 @@ function RunGroupSorting()
 		Trace("Group added: " .. SortGroups[#SortGroups].Name .. "/" .. 
         SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
 	end
+    
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups == 0 then table.remove(SortGroups) end
     ]]
     
     -- ======================================== Single levels ========================================
@@ -222,6 +231,42 @@ function RunGroupSorting()
         SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
 	end
     
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups == 0 then table.remove(SortGroups) end
+    
+    -- ======================================== Halfdouble levels ========================================
+    LevelGroups = {}
+    SortGroups[#SortGroups + 1] = {
+        Name = "Halfdouble",
+        Banner = THEME:GetPathG("", "Common fallback banner"),
+        SubGroups = {}
+    }
+    
+    for j, Song in ipairs(AllSongs) do
+        for i, Chart in ipairs(SongUtil.GetPlayableSteps(Song)) do
+            if ToEnumShortString(ToEnumShortString(Chart:GetStepsType())) == "Halfdouble" then
+                local ChartLevel = Chart:GetMeter()
+                if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
+                if not HasValue(LevelGroups[ChartLevel], Song) then
+                table.insert(LevelGroups[ChartLevel], Song) end
+            end
+		end
+    end
+    
+    for i, v in PairsByKeys(LevelGroups) do
+        SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups + 1] = {
+            Name = "Halfdouble " .. i,
+            Banner = THEME:GetPathG("", "Common fallback banner"), -- something appending v at the end
+            Songs = v,
+        }
+        
+        Trace("Group added: " .. SortGroups[#SortGroups].Name .. "/" .. 
+        SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
+	end
+    
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups == 0 then table.remove(SortGroups) end
+    
     -- ======================================== Double levels ========================================
     LevelGroups = {}
     SortGroups[#SortGroups + 1] = {
@@ -251,6 +296,9 @@ function RunGroupSorting()
         Trace("Group added: " .. SortGroups[#SortGroups].Name .. "/" .. 
         SortGroups[#SortGroups].SubGroups[#SortGroups[#SortGroups].SubGroups].Name)
 	end
+    
+    -- If nothing is available, remove the main entry completely
+    if #SortGroups[#SortGroups].SubGroups == 0 then table.remove(SortGroups) end
 	
 	Trace("Group sorting done!")
 end

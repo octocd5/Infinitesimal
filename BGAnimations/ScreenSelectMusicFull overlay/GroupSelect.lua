@@ -1,8 +1,12 @@
-local WheelSize = 13
-local WheelCenter = math.ceil( WheelSize * 0.5 )
-local WheelItem = { Width = 212, Height = 120 }
+local MainWheelSize = 15
+local MainWheelCenter = math.ceil( MainWheelSize * 0.5 )
 local MainWheelSpacing = 160
+
+local SubWheelSize = 13
+local SubWheelCenter = math.ceil( SubWheelSize * 0.5 )
 local SubWheelSpacing = 250
+
+local WheelItem = { Width = 212, Height = 120 }
 local WheelRotation = 0.1
 
 -- So that we can grab the Cur screen and use it outside an actor
@@ -40,8 +44,8 @@ else
 
 -- Update Group item targets
 local function UpdateMainItemTargets(val)
-    for i = 1, WheelSize do
-        MainTargets[i] = val + i - WheelCenter
+    for i = 1, MainWheelSize do
+        MainTargets[i] = val + i - MainWheelCenter
         -- Wrap to fit to Songs list size
         while MainTargets[i] > #SortGroups do MainTargets[i] = MainTargets[i] - #SortGroups end
         while MainTargets[i] < 1 do MainTargets[i] = MainTargets[i] + #SortGroups end
@@ -49,8 +53,8 @@ local function UpdateMainItemTargets(val)
 end
 
 local function UpdateSubItemTargets(val)
-    for i = 1, WheelSize do
-        SubTargets[i] = val + i - WheelCenter
+    for i = 1, SubWheelSize do
+        SubTargets[i] = val + i - SubWheelCenter
         -- Wrap to fit to Songs list size
         while SubTargets[i] > #SortGroups[CurMainIndex].SubGroups do SubTargets[i] = SubTargets[i] - #SortGroups[CurMainIndex].SubGroups end
         while SubTargets[i] < 1 do SubTargets[i] = SubTargets[i] + #SortGroups[CurMainIndex].SubGroups end
@@ -246,7 +250,7 @@ local t = Def.ActorFrame {
 
 -- The Wheel: originally made by Luizsan
 -- First wheel will be responsible for the main sort options
-for i = 1, WheelSize do
+for i = 1, MainWheelSize do
     t[#t+1] = Def.ActorFrame{
         OnCommand=function(self)
             -- Update sort text
@@ -259,14 +263,14 @@ for i = 1, WheelSize do
         end,
         
         RefreshHighlightMessageCommand=function(self)
-            self:stoptweening():easeoutexpo(0.4):diffusealpha(IsFocusedMain and 1 or 0.5)
+            self:finishtweening():easeoutexpo(0.4):diffusealpha(IsFocusedMain and 1 or 0.5)
         end,
 
         ScrollMainMessageCommand=function(self, params)
             self:stoptweening()
 
             -- Calculate position
-            local xpos = SCREEN_CENTER_X + (i - WheelCenter) * MainWheelSpacing
+            local xpos = SCREEN_CENTER_X + (i - MainWheelCenter) * MainWheelSpacing
 
             -- Calculate displacement based on input
             local displace = -params.Direction * MainWheelSpacing
@@ -276,11 +280,11 @@ for i = 1, WheelSize do
             
             -- Adjust and wrap actor index
             i = i - params.Direction
-            while i > WheelSize do i = i - WheelSize end
-            while i < 1 do i = i + WheelSize end
+            while i > MainWheelSize do i = i - MainWheelSize end
+            while i < 1 do i = i + MainWheelSize end
 
             -- If it's an edge item, update text. Edge items should never tween
-            if i == 1 or i == WheelSize then
+            if i == 2 or i == MainWheelSize - 1 then
 				self:GetChild("Text"):settext(SortGroups[MainTargets[i]].Name)
             elseif tween then
                 self:easeoutexpo(0.4)
@@ -302,13 +306,14 @@ for i = 1, WheelSize do
             Font="Montserrat semibold 40px",
             InitCommand=function(self)
                 self:zoom(0.75):skewx(-0.1):diffusetopedge(0.95,0.95,0.95,0.8):shadowlength(1.5)
+                :maxwidth(MainWheelSpacing / self:GetZoom())
             end,
         }
     }
 end
 
 -- Second wheel will be responsible for the sub groups
-for i = 1, WheelSize do
+for i = 1, SubWheelSize do
     t[#t+1] = Def.ActorFrame{
         OnCommand=function(self)
             if CurMainIndex == OrigGroupIndex then
@@ -318,8 +323,12 @@ for i = 1, WheelSize do
                 self:GetChild("Banner"):visible(false)
             end
             
+            self:GetChild("GroupInfo"):playcommand("Refresh")
+            self:GetChild(""):GetChild("Index"):playcommand("Refresh")
+            
             -- Ensure the wheel is highlighted or not at the beginning
             self:diffusealpha(IsFocusedMain and 0.5 or 1)
+            
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("ScrollSub", {Direction = 0})
         end,
@@ -328,14 +337,14 @@ for i = 1, WheelSize do
         RefreshSubMessageCommand=function(self, params) self:playcommand("On") end,
         
         RefreshHighlightMessageCommand=function(self)
-            self:stoptweening():easeoutexpo(0.4):diffusealpha(IsFocusedMain and 0.5 or 1)
+            self:finishtweening():easeoutexpo(0.4):diffusealpha(IsFocusedMain and 0.5 or 1)
         end,
 
         ScrollSubMessageCommand=function(self, params)
             self:stoptweening()
 
             -- Calculate position
-            local xpos = SCREEN_CENTER_X + (i - WheelCenter) * SubWheelSpacing
+            local xpos = SCREEN_CENTER_X + (i - SubWheelCenter) * SubWheelSpacing
 
             -- Calculate displacement based on input
             local displace = -params.Direction * SubWheelSpacing
@@ -345,12 +354,21 @@ for i = 1, WheelSize do
             
             -- Adjust and wrap actor index
             i = i - params.Direction
-            while i > WheelSize do i = i - WheelSize end
-            while i < 1 do i = i + WheelSize end
+            while i > SubWheelSize do i = i - SubWheelSize end
+            while i < 1 do i = i + SubWheelSize end
 
-            -- Edge items should never tween
-            if i == 1 or i == WheelSize then
-				
+            -- Update edge items with new info, they should also never tween
+            if i == 2 or i == SubWheelSize - 1 then
+				-- Force update banners because of how the sub wheel is now refreshed
+                if CurMainIndex == OrigGroupIndex then
+                    self:GetChild("Banner"):visible(true)
+                    UpdateBanner(self:GetChild("Banner"), SortGroups[CurMainIndex].SubGroups[SubTargets[i]].Banner)
+                else
+                    self:GetChild("Banner"):visible(false)
+                end
+                
+                self:GetChild("GroupInfo"):playcommand("Refresh")
+                self:GetChild(""):GetChild("Index"):playcommand("Refresh")
             elseif tween then
                 self:easeoutexpo(0.4)
             end
@@ -359,18 +377,6 @@ for i = 1, WheelSize do
             self:xy(xpos + displace, SCREEN_CENTER_Y + 40)
             self:rotationy((SCREEN_CENTER_X - xpos - displace) * -WheelRotation)
             self:z(-math.abs(SCREEN_CENTER_X - xpos - displace) * 0.25)
-            
-            -- Force update banners because of how the sub wheel is now refreshed
-            if CurMainIndex == OrigGroupIndex then
-                self:GetChild("Banner"):visible(true)
-                UpdateBanner(self:GetChild("Banner"), SortGroups[CurMainIndex].SubGroups[SubTargets[i]].Banner)
-            else
-                self:GetChild("Banner"):visible(false)
-            end
-            
-            -- Refresh actors below
-            self:GetChild("GroupInfo"):playcommand("Refresh")
-            self:GetChild(""):GetChild("Index"):playcommand("Refresh")
         end,
         
         Def.Sprite {
