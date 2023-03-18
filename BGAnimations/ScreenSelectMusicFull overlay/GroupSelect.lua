@@ -4,45 +4,63 @@ local WheelItem = { Width = 212, Height = 120 }
 local WheelSpacing = 250
 local WheelRotation = 0.1
 
+-- So that we can grab the Cur screen and use it outside an actor
 local ScreenSelectMusic
+
+-- Used for quitting the game
 local IsHome = GAMESTATE:GetCoinMode() == "CoinMode_Home"
 local IsEvent = GAMESTATE:IsEventMode()
 local TickCount = 0 -- Used for InputEventType_Repeat
 
 local IsOptionsList = { PLAYER_1 = false, PLAYER_2 = false }
+local IsSelectingGroup = false
 local IsBusy = false
-local Groups = {}
-local GroupSongNums = {}
-local Targets = {}
+local IsFocusedMain = false
+
+-- Create the variables necessary for both wheels
+local CurMainIndex = 1
+local CurSubIndex = 1
+local MainTargets = {}
+local SubTargets = {}
+
+-- This is to determine where are the original groups located
+-- TODO: Not hardcode this
+local OrigGroupIndex = 2
 
 local function BlockScreenInput(State)
     SCREENMAN:set_input_redirected(PLAYER_1, State)
     SCREENMAN:set_input_redirected(PLAYER_2, State)
 end
 
--- If no groups (lol how) don't load anything
-if SONGMAN:GetNumSongGroups() == 0 then
+-- If no songs don't load anything
+if SONGMAN:GetNumSongs() == 0 then
     return Def.Actor {}
 else
 
--- Iterate through the song groups and check if they have AT LEAST one song with valid charts.
--- If so, add them to the group list.
-for Group in ivalues(SONGMAN:GetSongGroupNames()) do
-    for Song in ivalues(SONGMAN:GetSongsInGroup(Group)) do
-        if #SongUtil.GetPlayableSteps(Song) > 0 then
-            Groups[#Groups+1] = Group
-            break
-        end
+-- Update Group item targets
+local function UpdateMainItemTargets(val)
+    for i = 1, WheelSize do
+        MainTargets[i] = val + i - WheelCenter
+        -- Wrap to fit to Songs list size
+        while MainTargets[i] > #SortGroups do MainTargets[i] = MainTargets[i] - #SortGroups end
+        while MainTargets[i] < 1 do MainTargets[i] = MainTargets[i] + #SortGroups end
     end
 end
 
-for Group in ivalues(Groups) do
-    GroupSongNums[Group] = #SONGMAN:GetSongsInGroup(Group)
+local function UpdateSubItemTargets(val)
+    for i = 1, WheelSize do
+        SubTargets[i] = val + i - WheelCenter
+        -- Wrap to fit to Songs list size
+        while SubTargets[i] > #SortGroups[CurMainIndex].SubGroups do SubTargets[i] = SubTargets[i] - #SortGroups[CurMainIndex].SubGroups end
+        while SubTargets[i] < 1 do SubTargets[i] = SubTargets[i] + #SortGroups[CurMainIndex].SubGroups end
+    end
 end
 
-local CurrentIndex = 1
-
-local IsSelectingGroup = false
+-- Manages banner on sprite
+function UpdateBanner(self, Banner)
+    if Banner == "" then Banner = THEME:GetPathG("Common fallback", "banner") end
+    self:Load(Banner):scaletofit(-WheelItem.Width / 2, -WheelItem.Height / 2, WheelItem.Width / 2, WheelItem.Height / 2)
+end
 
 local function InputHandler(event)
 	local pn = event.PlayerNumber
@@ -63,25 +81,62 @@ local function InputHandler(event)
     
     if IsSelectingGroup then
         if button == "Left" or button == "MenuLeft" or button == "DownLeft" then
-            CurrentIndex = CurrentIndex - 1
-            if CurrentIndex < 1 then CurrentIndex = #Groups end
-            
-            UpdateItemTargets(CurrentIndex)
-            MESSAGEMAN:Broadcast("Scroll", { Direction = -1 })
-
+            if IsFocusedMain then
+                CurMainIndex = CurMainIndex - 1
+                if CurMainIndex < 1 then CurMainIndex = #SortGroups end
+                UpdateMainItemTargets(CurMainIndex)
+                
+                if CurSubIndex < 1 then CurSubIndex = #SortGroups[CurMainIndex].SubGroups end
+                UpdateSubItemTargets(CurSubIndex)
+                
+                MESSAGEMAN:Broadcast("ScrollMain", { Direction = -1 })
+                MESSAGEMAN:Broadcast("ScrollSub", { Direction = 0 })
+            else
+                CurSubIndex = CurSubIndex - 1
+                if CurSubIndex < 1 then CurSubIndex = #SortGroups[CurMainIndex].SubGroups end
+                
+                UpdateSubItemTargets(CurSubIndex)
+                
+                MESSAGEMAN:Broadcast("ScrollSub", { Direction = -1 })
+            end
         elseif button == "Right" or button == "MenuRight" or button == "DownRight" then
-            CurrentIndex = CurrentIndex + 1
-            if CurrentIndex > #Groups then CurrentIndex = 1 end
-            
-            UpdateItemTargets(CurrentIndex)
-            MESSAGEMAN:Broadcast("Scroll", { Direction = 1 })
-
+            if IsFocusedMain then
+                CurMainIndex = CurMainIndex + 1
+                if CurMainIndex > #SortGroups then CurMainIndex = 1 end
+                UpdateMainItemTargets(CurMainIndex)
+                
+                if CurSubIndex > #SortGroups[CurMainIndex].SubGroups then CurSubIndex = 1 end
+                UpdateSubItemTargets(CurSubIndex)
+                
+                MESSAGEMAN:Broadcast("ScrollMain", { Direction = 1 })
+                MESSAGEMAN:Broadcast("ScrollSub", { Direction = 0 })
+            else
+                CurSubIndex = CurSubIndex + 1
+                if CurSubIndex > #SortGroups[CurMainIndex].SubGroups then CurSubIndex = 1 end
+                
+                UpdateSubItemTargets(CurSubIndex)
+                
+                MESSAGEMAN:Broadcast("ScrollSub", { Direction = 1 })
+            end
         elseif button == "Start" or button == "MenuStart" or button == "Center" then
-            ScreenSelectMusic:GetChild('MusicWheel'):SetOpenSection(Groups[CurrentIndex])
-            MESSAGEMAN:Broadcast("CloseGroupWheel")
+            if IsFocusedMain then 
+                IsFocusedMain = false
+                if CurSubIndex > #SortGroups[CurMainIndex].SubGroups then CurSubIndex = 1 end
+                UpdateSubItemTargets(CurSubIndex)
+                MESSAGEMAN:Broadcast("RefreshHighlight") 
+            else
+                GroupIndex = CurMainIndex
+                SubGroupIndex = CurSubIndex
+                MESSAGEMAN:Broadcast("CloseGroupWheel")
+            end
             
         elseif button == "UpRight" or button == "UpLeft" or button == "Up" then
-            if IsHome or IsEvent then MESSAGEMAN:Broadcast("ExitPressed") end
+            if not IsFocusedMain then 
+                IsFocusedMain = true
+                MESSAGEMAN:Broadcast("RefreshHighlight")
+            elseif IsHome or IsEvent then 
+                MESSAGEMAN:Broadcast("ExitPressed")
+            end
         end
 
         if IsHome or IsEvent then
@@ -101,45 +156,17 @@ local function InputHandler(event)
 	MESSAGEMAN:Broadcast("UpdateMusic")
 end
 
--- Update Songs item targets
-function UpdateItemTargets(val)
-    for i = 1, WheelSize do
-        Targets[i] = val + i - WheelCenter
-        -- Wrap to fit to Songs list size
-        while Targets[i] > #Groups do Targets[i] = Targets[i] - #Groups end
-        while Targets[i] < 1 do Targets[i] = Targets[i] + #Groups end
-    end
-end
-
--- Manages banner on sprite
-function UpdateBanner(self, Group)
-    local Banner = SONGMAN:GetSongGroupBannerPath(Group)
-    if Banner == "" then Banner = THEME:GetPathG("Common fallback", "banner") end
-    self:Load(Banner):scaletofit(-WheelItem.Width / 2, -WheelItem.Height / 2, WheelItem.Width / 2, WheelItem.Height / 2)
-end
-
 local t = Def.ActorFrame {
     InitCommand=function(self)
         self:fov(90):SetDrawByZPosition(true)
         :vanishpoint(SCREEN_CENTER_X, SCREEN_CENTER_Y):diffusealpha(0)
-        UpdateItemTargets(CurrentIndex)
+        UpdateMainItemTargets(CurMainIndex)
+        UpdateSubItemTargets(CurSubIndex)
     end,
 
     OnCommand=function(self)
         BlockScreenInput(false)
         ScreenSelectMusic = SCREENMAN:GetTopScreen()
-        
-        -- Make sure to start the group wheel where the current song is located (if available)
-        if GAMESTATE:GetCurrentSong() then
-            for Index, Group in ipairs(Groups) do
-                if GAMESTATE:GetCurrentSong():GetGroupName() == Group then
-                    -- SCREENMAN:SystemMessage(Index .. " - " .. Group)
-                    CurrentIndex = Index
-                    UpdateItemTargets(CurrentIndex)
-                    break
-                end
-            end
-        end
         SCREENMAN:GetTopScreen():AddInputCallback(InputHandler)
     end,
     
@@ -147,7 +174,6 @@ local t = Def.ActorFrame {
     
     SongChosenMessageCommand=function(self) IsBusy = true end,
     SongUnchosenMessageCommand=function(self) self:queuecommand("NotBusy") end,
-    NotBusyCommand=function(self) IsBusy = false end,
     
     OptionsListOpenedMessageCommand=function(self, params) IsOptionsList[params.Player] = true end,
     OptionsListClosedMessageCommand=function(self, params) IsOptionsList[params.Player] = false end,
@@ -178,11 +204,23 @@ local t = Def.ActorFrame {
         SCREENMAN:GetTopScreen():PostScreenMessage("SM_SongChanged", 0 )
         MESSAGEMAN:Broadcast("StartSelectingSong")
     end,
+    
+    Def.Sprite {
+        Name="Highlight",
+        Texture=THEME:GetPathG("", "MusicWheel/FrameHighlight"),
+        InitCommand=function(self)
+            self:x(SCREEN_CENTER_X):y(SCREEN_CENTER_Y + (IsFocusedMain and -80 or 80)):z(1)
+        end,
+        RefreshHighlightMessageCommand=function(self)
+            self:stoptweening():easeoutexpo(0.4):y(SCREEN_CENTER_Y + (IsFocusedMain and -80 or 80))
+        end
+    },
 
     Def.Sound {
         File=THEME:GetPathS("MusicWheel", "change"),
         IsAction=true,
-        ScrollMessageCommand=function(self) self:play() end
+        ScrollMainMessageCommand=function(self) self:play() end,
+        ScrollSubMessageCommand=function(self, params) if params.Direction ~= 0 then self:play() end end
     },
 
     Def.Sound {
@@ -193,17 +231,18 @@ local t = Def.ActorFrame {
 }
 
 -- The Wheel: originally made by Luizsan
+-- First wheel will be responsible for the main options
 for i = 1, WheelSize do
     t[#t+1] = Def.ActorFrame{
         OnCommand=function(self)
-            -- Load banner
-            UpdateBanner(self:GetChild("Banner"), Groups[Targets[i]])
+            -- Update banner text
+            self:GetChild("BannerText"):settext(SortGroups[MainTargets[i]].Name)
 
             -- Set initial position, Direction = 0 means it won't tween
-            self:playcommand("Scroll", {Direction = 0})
+            self:playcommand("ScrollMain", {Direction = 0})
         end,
 
-        ScrollMessageCommand=function(self, params)
+        ScrollMainMessageCommand=function(self, params)
             self:stoptweening()
 
             -- Calculate position
@@ -220,26 +259,100 @@ for i = 1, WheelSize do
             while i > WheelSize do i = i - WheelSize end
             while i < 1 do i = i + WheelSize end
 
-            -- If it's an edge item, load a new banner. Edge items should never tween
+            -- If it's an edge item, update banner text. Edge items should never tween
             if i == 1 or i == WheelSize then
-				UpdateBanner(self:GetChild("Banner"), Groups[Targets[i]])
+				self:GetChild("BannerText"):settext(SortGroups[MainTargets[i]].Name)
             elseif tween then
                 self:easeoutexpo(0.4)
             end
 
             -- Animate!
-            self:xy(xpos + displace, SCREEN_CENTER_Y)
+            self:xy(xpos + displace, SCREEN_CENTER_Y - 80)
             self:rotationy((SCREEN_CENTER_X - xpos - displace) * -WheelRotation)
             self:z(-math.abs(SCREEN_CENTER_X - xpos - displace) * 0.25)
-            self:GetChild(""):GetChild("Index"):playcommand("Refresh")
+        end,
+        
+        Def.Sprite {
+            Texture=THEME:GetPathG("", "MusicWheel/GradientBanner"),
+            InitCommand=function(self) self:scaletoclipped(WheelItem.Width , WheelItem.Height) end
+        },
+
+        Def.Sprite {
+            Texture=THEME:GetPathG("", "MusicWheel/GroupFrame"),
+        },
+        
+        Def.BitmapText {
+            Name="BannerText",
+            Font="Montserrat semibold 40px",
+            InitCommand=function(self)
+                self:zoom(0.75):skewx(-0.1):diffusetopedge(0.95,0.95,0.95,0.8):shadowlength(1.5)
+            end,
+        }
+    }
+end
+
+-- Second wheel will be responsible for the sub groups
+for i = 1, WheelSize do
+    t[#t+1] = Def.ActorFrame{
+        OnCommand=function(self)
+            if CurMainIndex == OrigGroupIndex then
+                self:GetChild("Banner"):visible(true)
+                UpdateBanner(self:GetChild("Banner"), SortGroups[CurMainIndex].SubGroups[SubTargets[i]].Banner)
+            else
+                self:GetChild("Banner"):visible(false)
+            end
+
+            -- Set initial position, Direction = 0 means it won't tween
+            self:playcommand("ScrollSub", {Direction = 0})
+        end,
+
+        ScrollSubMessageCommand=function(self, params)
+            self:stoptweening()
+
+            -- Calculate position
+            local xpos = SCREEN_CENTER_X + (i - WheelCenter) * WheelSpacing
+
+            -- Calculate displacement based on input
+            local displace = -params.Direction * WheelSpacing
+
+            -- Only tween if a direction was specified
+            local tween = params and params.Direction and math.abs(params.Direction) > 0
+            
+            -- Adjust and wrap actor index
+            i = i - params.Direction
+            while i > WheelSize do i = i - WheelSize end
+            while i < 1 do i = i + WheelSize end
+
+            -- Edge items should never tween
+            if i == 1 or i == WheelSize then
+				
+            elseif tween then
+                self:easeoutexpo(0.4)
+            end
+
+            -- Animate!
+            self:xy(xpos + displace, SCREEN_CENTER_Y + 80)
+            self:rotationy((SCREEN_CENTER_X - xpos - displace) * -WheelRotation)
+            self:z(-math.abs(SCREEN_CENTER_X - xpos - displace) * 0.25)
+            
+            -- Force update banners because of how the sub wheel is now refreshed
+            if CurMainIndex == OrigGroupIndex then
+                self:GetChild("Banner"):visible(true)
+                UpdateBanner(self:GetChild("Banner"), SortGroups[CurMainIndex].SubGroups[SubTargets[i]].Banner)
+            else
+                self:GetChild("Banner"):visible(false)
+            end
+            
+            -- Refresh actors below
             self:GetChild("GroupInfo"):playcommand("Refresh")
+            self:GetChild(""):GetChild("Index"):playcommand("Refresh")
         end,
         
         Def.Sprite {
             Texture=THEME:GetPathG("", "MusicWheel/GradientBanner"),
             InitCommand=function(self) self:scaletoclipped(WheelItem.Width, WheelItem.Height) end
         },
-
+        
         Def.Banner {
             Name="Banner",
         },
@@ -247,7 +360,7 @@ for i = 1, WheelSize do
         Def.Sprite {
             Texture=THEME:GetPathG("", "MusicWheel/GroupFrame"),
         },
-
+        
         Def.ActorFrame {
             Def.Quad {
                 InitCommand=function(self)
@@ -263,7 +376,7 @@ for i = 1, WheelSize do
                 InitCommand=function(self)
                     self:addy(-50):zoom(0.4):skewx(-0.1):diffusetopedge(0.95,0.95,0.95,0.8):shadowlength(1.5)
                 end,
-                RefreshCommand=function(self, params) self:settext(Targets[i]) end
+                RefreshCommand=function(self, params) self:settext(SubTargets[i]) end
             }
         },
         
@@ -271,10 +384,13 @@ for i = 1, WheelSize do
             Name="GroupInfo",
             Font="Montserrat semibold 40px",
             InitCommand=function(self)
-                self:addy(64):zoom(0.5):skewx(-0.1):diffusetopedge(0.95,0.95,0.95,0.8):shadowlength(1.5)
+                self:y(CurMainIndex == OrigGroupIndex and 64 or -8):zoom(0.5):skewx(-0.1):diffusetopedge(0.95,0.95,0.95,0.8):shadowlength(1.5)
                 :maxwidth(420):vertalign(0):wrapwidthpixels(420):vertspacing(-16)
             end,
-            RefreshCommand=function(self, params) self:settext(Groups[Targets[i]] .. "\n" .. GroupSongNums[Groups[Targets[i]]] .. " Songs") end
+            RefreshCommand=function(self, params) 
+                self:settext(SortGroups[CurMainIndex].SubGroups[SubTargets[i]].Name) 
+                :y(CurMainIndex == OrigGroupIndex and 64 or -8)
+            end
         }
     }
 end

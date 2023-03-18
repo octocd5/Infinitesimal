@@ -60,7 +60,7 @@ t[#t+1] = Def.ActorFrame {
         CloseGroupWheelMessageCommand=function(self) self:stoptweening():easeoutexpo(0.25):diffusealpha(0) end,
         OpenGroupWheelMessageCommand=function(self) self:stoptweening():easeoutexpo(1):diffusealpha(0.8) end,
     },
-
+    
     LoadActor("GroupSelect") .. {
         -- Zoom doesn't center things so we need to recenter them
         InitCommand=function(self)

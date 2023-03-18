@@ -1,4 +1,5 @@
-LastSongIndex = 0
+GroupIndex = 1
+SubGroupIndex = 1
 
 function OptionNameString(str)
     return THEME:GetString('OptionNames',str)

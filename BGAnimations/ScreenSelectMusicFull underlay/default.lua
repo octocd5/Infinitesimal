@@ -1,9 +1,4 @@
-local t = Def.ActorFrame {
-    OnCommand=function(self)
-        -- Always change sort back to groups, since Basic mode can leave it stuck in Preferred
-        SCREENMAN:GetTopScreen():GetMusicWheel():ChangeSort("SortOrder_Group")
-    end
-}
+local t = Def.ActorFrame {}
 
 -- The column thing
 t[#t+1] = Def.Quad {
@@ -19,6 +14,8 @@ t[#t+1] = Def.Quad {
         self:stoptweening():decelerate(0.5):zoomy(0)
     end
 }
+
+t[#t+1] = LoadActor("MusicWheel") .. { Name="MusicWheel" }
 
 for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
     t[#t+1] = Def.ActorFrame {
@@ -63,6 +60,9 @@ for pn in ivalues(GAMESTATE:GetHumanPlayers()) do
                     self:stoptweening():easeoutexpo(0.5)
                     :x(SCREEN_CENTER_X + (pn == PLAYER_2 and 380 or -380))
                 end
+            end,
+            UpdateChartDisplayMessageCommand=function(self, params) if params.Player == pn then
+                self:stoptweening():easeoutexpo(0.5):x(SCREEN_CENTER_X) end
             end,
             StepsUnchosenMessageCommand=function(self)
                 self:stoptweening():easeoutexpo(0.5):x(SCREEN_CENTER_X)

@@ -7,21 +7,27 @@ local WheelRotation = 0.1
 local Songs = {}
 local Targets = {}
 
--- Not load anything if Preferred Sort is not available, this silly check is done
--- because the game will fallback to all songs present in the game install
-if #SONGMAN:GetPreferredSortSongs() == SONGMAN:GetNumSongs() then
+-- Not load anything if no group sorts are available (catastrophic event or no songs)
+if next(SortGroups) == nil then
     return Def.Actor {}
 else
 
-for Song in ivalues(SONGMAN:GetPreferredSortSongs()) do
-	if #SongUtil.GetPlayableSteps(Song) > 0 then
-		Songs[#Songs+1] = Song
-	end
-end
+local SongIndex = 1
+local IsBusy = false
 
-local CurrentIndex = math.random(#Songs)
-if LastSongIndex ~= 0 then CurrentIndex = LastSongIndex end
-local SongIsChosen = false
+RunGroupSorting()
+-- Default is to start at All for now
+Songs = SortGroups[1].SubGroups[1].Songs
+
+-- Update Songs item targets
+local function UpdateItemTargets(val)
+    for i = 1, WheelSize do
+        Targets[i] = val + i - WheelCenter
+        -- Wrap to fit to Songs list size
+        while Targets[i] > #Songs do Targets[i] = Targets[i] - #Songs end
+        while Targets[i] < 1 do Targets[i] = Targets[i] + #Songs end
+    end
+end
 
 local function InputHandler(event)
 	local pn = event.PlayerNumber
@@ -45,23 +51,23 @@ local function InputHandler(event)
     if pn == PLAYER_1 and not GAMESTATE:IsPlayerEnabled(PLAYER_1) then return end
     if pn == PLAYER_2 and not GAMESTATE:IsPlayerEnabled(PLAYER_2) then return end
 
-    if not SongIsChosen then
+    if not IsBusy then
         if button == "Left" or button == "MenuLeft" or button == "DownLeft" then
-            CurrentIndex = CurrentIndex - 1
-            if CurrentIndex < 1 then CurrentIndex = #Songs end
+            SongIndex = SongIndex - 1
+            if SongIndex < 1 then SongIndex = #Songs end
             
-            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
-            UpdateItemTargets(CurrentIndex)
+            GAMESTATE:SetCurrentSong(Songs[SongIndex])
+            UpdateItemTargets(SongIndex)
             MESSAGEMAN:Broadcast("Scroll", { Direction = -1 })
 
         elseif button == "Right" or button == "MenuRight" or button == "DownRight" then
-            CurrentIndex = CurrentIndex + 1
-            if CurrentIndex > #Songs then CurrentIndex = 1 end
+            SongIndex = SongIndex + 1
+            if SongIndex > #Songs then SongIndex = 1 end
             
-            GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
-            UpdateItemTargets(CurrentIndex)
+            GAMESTATE:SetCurrentSong(Songs[SongIndex])
+            UpdateItemTargets(SongIndex)
             MESSAGEMAN:Broadcast("Scroll", { Direction = 1 })
-
+            
         elseif button == "Start" or button == "MenuStart" or button == "Center" then
             MESSAGEMAN:Broadcast("MusicWheelStart")
 
@@ -73,16 +79,6 @@ local function InputHandler(event)
 	MESSAGEMAN:Broadcast("UpdateMusic")
 end
 
--- Update Songs item targets
-local function UpdateItemTargets(val)
-    for i = 1, WheelSize do
-        Targets[i] = val + i - WheelCenter
-        -- Wrap to fit to Songs list size
-        while Targets[i] > #Songs do Targets[i] = Targets[i] - #Songs end
-        while Targets[i] < 1 do Targets[i] = Targets[i] + #Songs end
-    end
-end
-
 -- Manages banner on sprite
 local function UpdateBanner(self, Song)
     self:LoadFromSongBanner(Song):scaletoclipped(WheelItem.Width, WheelItem.Height)
@@ -92,22 +88,14 @@ local t = Def.ActorFrame {
     InitCommand=function(self)
         self:y(SCREEN_HEIGHT / 2 + 155):fov(90):SetDrawByZPosition(true)
         :vanishpoint(SCREEN_CENTER_X, SCREEN_BOTTOM - 150)
-        UpdateItemTargets(CurrentIndex)
+        UpdateItemTargets(SongIndex)
     end,
 
     OnCommand=function(self)
-        GAMESTATE:SetCurrentSong(Songs[CurrentIndex])
+        GAMESTATE:SetCurrentSong(Songs[SongIndex])
         SCREENMAN:GetTopScreen():AddInputCallback(InputHandler)
 
         self:easeoutexpo(1):y(SCREEN_HEIGHT / 2 - 150)
-    end,
-
-    CodeCommand=function(self, params)
-        if params.Name == "FullMode" then
-            -- Prevent the song list from moving when transitioning
-            SongIsChosen = true
-            self:finishtweening():sleep(1):easeoutexpo(1):y(SCREEN_HEIGHT / 2 + 155)
-        end
     end,
     
     -- Race condition workaround (yuck)
@@ -117,12 +105,24 @@ local t = Def.ActorFrame {
     -- These are to control the functionality of the music wheel
     SongChosenMessageCommand=function(self)
         self:stoptweening():easeoutexpo(1):y(SCREEN_HEIGHT / 2 + 150)
-        SongIsChosen = true
+        :playcommand("Busy")
     end,
     SongUnchosenMessageCommand=function(self)
         self:stoptweening():easeoutexpo(0.5):y(SCREEN_HEIGHT / 2 - 150)
-        SongIsChosen = false
+        :playcommand("NotBusy")
     end,
+    
+    OpenGroupWheelMessageCommand=function(self) IsBusy = true end,
+    CloseGroupWheelMessageCommand=function(self) 
+        Songs = SortGroups[GroupIndex].SubGroups[SubGroupIndex].Songs
+        GAMESTATE:SetCurrentSong(Songs[SongIndex])
+        UpdateItemTargets(SongIndex)
+        MESSAGEMAN:Broadcast("ForceUpdate")
+        self:sleep(0.01):queuecommand("NotBusy")
+    end,
+    
+    BusyCommand=function(self) IsBusy = true end,
+    NotBusyCommand=function(self) IsBusy = false end,
     
     -- Play song preview (thanks Luizsan)
     Def.Actor {
@@ -163,10 +163,20 @@ for i = 1, WheelSize do
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("Scroll", {Direction = 0})
         end,
+		
+		ForceUpdateMessageCommand=function(self)
+			-- Load banner
+            UpdateBanner(self:GetChild("Banner"), Songs[Targets[i]])
+            
+            SCREENMAN:SystemMessage(SortGroups[GroupIndex].Name)
+
+            -- Set initial position, Direction = 0 means it won't tween
+            self:playcommand("Scroll", {Direction = 0})
+		end,
 
         ScrollMessageCommand=function(self,param)
             -- Save this so that we can resume the last selection after gameplay
-            LastSongIndex = CurrentIndex
+            LastSongIndex = SongIndex
             
             self:stoptweening()
 

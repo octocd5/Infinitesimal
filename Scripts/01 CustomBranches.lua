@@ -31,7 +31,7 @@ function SelectMusicOrCourse()
     elseif getenv("IsBasicMode") and UseBasicMode then
         return "ScreenSelectMusicBasic"
     else
-        return "ScreenSelectMusic"
+        return "ScreenSelectMusicFull"
     end
 end
 
