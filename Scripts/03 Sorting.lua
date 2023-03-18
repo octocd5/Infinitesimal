@@ -272,7 +272,6 @@ function RunGroupSorting()
                 if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
                 if not HasValue(LevelGroups[ChartLevel], Song) then
                     table.insert(LevelGroups[ChartLevel], Song) 
-                    break 
                 end
             end
 		end
@@ -307,7 +306,6 @@ function RunGroupSorting()
                 if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
                 if not HasValue(LevelGroups[ChartLevel], Song) then
                     table.insert(LevelGroups[ChartLevel], Song) 
-                    break 
                 end
             end
 		end
@@ -342,7 +340,6 @@ function RunGroupSorting()
                 if LevelGroups[ChartLevel] == nil then LevelGroups[ChartLevel] = {} end
                 if not HasValue(LevelGroups[ChartLevel], Song) then
                     table.insert(LevelGroups[ChartLevel], Song) 
-                    break 
                 end
             end
 		end
