@@ -1,7 +1,8 @@
 local WheelSize = 13
 local WheelCenter = math.ceil( WheelSize * 0.5 )
 local WheelItem = { Width = 212, Height = 120 }
-local WheelSpacing = 250
+local MainWheelSpacing = 160
+local SubWheelSpacing = 250
 local WheelRotation = 0.1
 
 -- So that we can grab the Cur screen and use it outside an actor
@@ -158,7 +159,7 @@ end
 local t = Def.ActorFrame {
     InitCommand=function(self)
         self:fov(90):SetDrawByZPosition(true)
-        :vanishpoint(SCREEN_CENTER_X, SCREEN_CENTER_Y):diffusealpha(0)
+        :vanishpoint(SCREEN_CENTER_X, SCREEN_CENTER_Y + 40):diffusealpha(0)
         UpdateMainItemTargets(CurMainIndex)
         UpdateSubItemTargets(CurSubIndex)
     end,
@@ -206,16 +207,28 @@ local t = Def.ActorFrame {
         MESSAGEMAN:Broadcast("StartSelectingSong")
     end,
     
+    --[[
     Def.Sprite {
         Name="Highlight",
         Texture=THEME:GetPathG("", "MusicWheel/FrameHighlight"),
         InitCommand=function(self)
-            self:x(SCREEN_CENTER_X):y(SCREEN_CENTER_Y + (IsFocusedMain and -80 or 80)):z(1)
+            self:x(SCREEN_CENTER_X):z(1)
+            if IsFocusedMain then
+                self:y(SCREEN_CENTER_Y - 60):zoomx(0.75):zoomy(0.3)
+            else
+                self:y(SCREEN_CENTER_Y + 40):zoom(1)
+            end
         end,
         RefreshHighlightMessageCommand=function(self)
-            self:stoptweening():easeoutexpo(0.4):y(SCREEN_CENTER_Y + (IsFocusedMain and -80 or 80))
+            self:stoptweening():easeoutexpo(0.4)
+            if IsFocusedMain then
+                self:y(SCREEN_CENTER_Y - 60):zoomx(0.75):zoomy(0.3)
+            else
+                self:y(SCREEN_CENTER_Y + 40):zoom(1)
+            end
         end
     },
+    ]]
 
     Def.Sound {
         File=THEME:GetPathS("MusicWheel", "change"),
@@ -232,25 +245,31 @@ local t = Def.ActorFrame {
 }
 
 -- The Wheel: originally made by Luizsan
--- First wheel will be responsible for the main options
+-- First wheel will be responsible for the main sort options
 for i = 1, WheelSize do
     t[#t+1] = Def.ActorFrame{
         OnCommand=function(self)
-            -- Update banner text
-            self:GetChild("BannerText"):settext(SortGroups[MainTargets[i]].Name)
-
+            -- Update sort text
+            self:GetChild("Text"):settext(SortGroups[MainTargets[i]].Name)
+            
+            -- Ensure the wheel is highlighted or not at the beginning
+            self:diffusealpha(IsFocusedMain and 1 or 0.5)
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("ScrollMain", {Direction = 0})
+        end,
+        
+        RefreshHighlightMessageCommand=function(self)
+            self:stoptweening():easeoutexpo(0.4):diffusealpha(IsFocusedMain and 1 or 0.5)
         end,
 
         ScrollMainMessageCommand=function(self, params)
             self:stoptweening()
 
             -- Calculate position
-            local xpos = SCREEN_CENTER_X + (i - WheelCenter) * WheelSpacing
+            local xpos = SCREEN_CENTER_X + (i - WheelCenter) * MainWheelSpacing
 
             -- Calculate displacement based on input
-            local displace = -params.Direction * WheelSpacing
+            local displace = -params.Direction * MainWheelSpacing
 
             -- Only tween if a direction was specified
             local tween = params and params.Direction and math.abs(params.Direction) > 0
@@ -260,30 +279,26 @@ for i = 1, WheelSize do
             while i > WheelSize do i = i - WheelSize end
             while i < 1 do i = i + WheelSize end
 
-            -- If it's an edge item, update banner text. Edge items should never tween
+            -- If it's an edge item, update text. Edge items should never tween
             if i == 1 or i == WheelSize then
-				self:GetChild("BannerText"):settext(SortGroups[MainTargets[i]].Name)
+				self:GetChild("Text"):settext(SortGroups[MainTargets[i]].Name)
             elseif tween then
                 self:easeoutexpo(0.4)
             end
 
             -- Animate!
-            self:xy(xpos + displace, SCREEN_CENTER_Y - 80)
-            self:rotationy((SCREEN_CENTER_X - xpos - displace) * -WheelRotation)
-            self:z(-math.abs(SCREEN_CENTER_X - xpos - displace) * 0.25)
+            self:xy(xpos + displace, SCREEN_CENTER_Y - 60)
         end,
         
-        Def.Sprite {
-            Texture=THEME:GetPathG("", "MusicWheel/GradientBanner"),
-            InitCommand=function(self) self:scaletoclipped(WheelItem.Width , WheelItem.Height) end
-        },
-
-        Def.Sprite {
-            Texture=THEME:GetPathG("", "MusicWheel/GroupFrame"),
+        Def.Quad {
+            InitCommand=function(self)
+                self:zoomto(MainWheelSpacing, 40)
+                :diffuse(color("#1d1d1d")):diffusebottomedge(color("#7b7b7b"))
+            end
         },
         
         Def.BitmapText {
-            Name="BannerText",
+            Name="Text",
             Font="Montserrat semibold 40px",
             InitCommand=function(self)
                 self:zoom(0.75):skewx(-0.1):diffusetopedge(0.95,0.95,0.95,0.8):shadowlength(1.5)
@@ -302,21 +317,28 @@ for i = 1, WheelSize do
             else
                 self:GetChild("Banner"):visible(false)
             end
-
+            
+            -- Ensure the wheel is highlighted or not at the beginning
+            self:diffusealpha(IsFocusedMain and 0.5 or 1)
             -- Set initial position, Direction = 0 means it won't tween
             self:playcommand("ScrollSub", {Direction = 0})
         end,
         
+        -- This is so that whenever the main wheel scrolls all the bottom items can update as well.
         RefreshSubMessageCommand=function(self, params) self:playcommand("On") end,
+        
+        RefreshHighlightMessageCommand=function(self)
+            self:stoptweening():easeoutexpo(0.4):diffusealpha(IsFocusedMain and 0.5 or 1)
+        end,
 
         ScrollSubMessageCommand=function(self, params)
             self:stoptweening()
 
             -- Calculate position
-            local xpos = SCREEN_CENTER_X + (i - WheelCenter) * WheelSpacing
+            local xpos = SCREEN_CENTER_X + (i - WheelCenter) * SubWheelSpacing
 
             -- Calculate displacement based on input
-            local displace = -params.Direction * WheelSpacing
+            local displace = -params.Direction * SubWheelSpacing
 
             -- Only tween if a direction was specified
             local tween = params and params.Direction and math.abs(params.Direction) > 0
@@ -334,7 +356,7 @@ for i = 1, WheelSize do
             end
 
             -- Animate!
-            self:xy(xpos + displace, SCREEN_CENTER_Y + 80)
+            self:xy(xpos + displace, SCREEN_CENTER_Y + 40)
             self:rotationy((SCREEN_CENTER_X - xpos - displace) * -WheelRotation)
             self:z(-math.abs(SCREEN_CENTER_X - xpos - displace) * 0.25)
             
